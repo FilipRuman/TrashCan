@@ -3,6 +3,5 @@ pub mod alu;
 pub mod b16;
 pub mod b8;
 pub mod bit;
-pub mod dLatch;
+pub mod memory;
 pub mod multiplication;
-pub mod division;

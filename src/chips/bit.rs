@@ -18,7 +18,35 @@ pub fn xor(a: bool, b: bool) -> bool {
 
 #[inline(always)]
 pub fn mux_4(a: bool, b: bool, c: bool, d: bool, sel_1: bool, sel_2: bool) -> bool {
-    (a & sel_1) | (b & !sel_1) | (c & sel_2) | (d & !sel_2)
+    (a & sel_1 & !sel_2) | (b & !sel_1 & !sel_2) | (c & sel_1 & sel_2) | (d & sel_2 & !sel_1)
+}
+#[inline(always)]
+pub fn mux_3x3(a: bool, b: bool, c: bool, sel_1: bool, sel_2: bool, sel_3: bool) -> bool {
+    (a & sel_1) | (b & sel_2) | (c & sel_3)
+}
+
+#[inline(always)]
+pub fn mux_8(
+    a: bool,
+    b: bool,
+    c: bool,
+    d: bool,
+    e: bool,
+    f: bool,
+    g: bool,
+    h: bool,
+    sel_1: bool,
+    sel_2: bool,
+    sel_3: bool,
+) -> bool {
+    (a & !sel_1 & !sel_2 & !sel_3)
+        | (b & !sel_1 & !sel_2 & sel_3)
+        | (c & !sel_1 & sel_2 & !sel_3)
+        | (d & !sel_1 & sel_2 & sel_3)
+        | (e & sel_1 & !sel_2 & !sel_3)
+        | (f & sel_1 & !sel_2 & sel_3)
+        | (g & sel_1 & sel_2 & !sel_3)
+        | (h & sel_1 & sel_2 & sel_3)
 }
 
 #[inline(always)]
@@ -32,11 +60,23 @@ pub fn d_mux_4(input: bool, sel_1: bool, sel_2: bool) -> (bool, bool, bool, bool
     (input & sel_1, input & !sel_1, input & sel_2, input & !sel_2)
 }
 
+pub fn d_mux8(input: bool, sel_1: bool, sel_2: bool, sel_3: bool) -> [bool; 8] {
+    [
+        input & !sel_1 & !sel_2 & !sel_3,
+        input & !sel_1 & !sel_2 & sel_3,
+        input & !sel_1 & sel_2 & !sel_3,
+        input & !sel_1 & sel_2 & sel_3,
+        input & sel_1 & !sel_2 & !sel_3,
+        input & sel_1 & !sel_2 & sel_3,
+        input & sel_1 & sel_2 & !sel_3,
+        input & sel_1 & sel_2 & sel_3,
+    ]
+}
+
 #[inline(always)]
 pub fn d_mux(input: bool, sel: bool) -> (bool, bool) {
     (input & sel, input & !sel)
 }
-
 
 #[inline(always)]
 pub fn equals(b: bool, a: bool) -> bool {

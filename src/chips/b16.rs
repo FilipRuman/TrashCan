@@ -3,7 +3,7 @@ use std::{
     ops::{Add, BitAnd, BitXor, Not},
 };
 
-use super::bit::{d_mux, mux};
+use super::bit::{d_mux, d_mux8, mux, mux_3x3, mux_8};
 
 #[derive(Clone, Copy, Debug)]
 pub struct B16(pub i16);
@@ -112,6 +112,63 @@ impl B16 {
     /// true left false right
     pub fn mux(self, b: B16, sel: bool) -> B16 {
         B16::from_fn(|i| mux(self.bit(i), b.bit(i), sel))
+    }
+
+    #[inline(always)]
+    pub fn mux3x3(self, b: B16, c: B16, sel_1: bool, sel_2: bool, sel_3: bool) -> B16 {
+        B16::from_fn(|i| mux_3x3(self.bit(i), b.bit(i), c.bit(i), sel_1, sel_2, sel_3))
+    }
+    #[inline(always)]
+    /// Works like mux sle=true-> b instead of self
+    /// true left false right
+    /// This could be much more efficient by using function calls and not calling ones that are not
+    /// needed
+    pub fn mux8(
+        self,
+        b: B16,
+        c: B16,
+        d: B16,
+        e: B16,
+        f: B16,
+        g: B16,
+        h: B16,
+        sel_1: bool,
+        sel_2: bool,
+        sel_3: bool,
+    ) -> B16 {
+        B16::from_fn(|i| {
+            mux_8(
+                self.bit(i),
+                b.bit(i),
+                c.bit(i),
+                d.bit(i),
+                e.bit(i),
+                f.bit(i),
+                g.bit(i),
+                h.bit(i),
+                sel_1,
+                sel_2,
+                sel_3,
+            )
+        })
+    }
+    #[inline(always)]
+    pub fn d_mux8(self, sel_1: bool, sel_2: bool, sel_3: bool) -> [B16; 8] {
+        let mut out = [[false; 8]; 16];
+        for i in 0..16 {
+            out[i] = d_mux8(self.bit(i as u8), sel_1, sel_2, sel_3)
+        }
+
+        [
+            B16::from_fn(|i| out[i as usize][0]),
+            B16::from_fn(|i| out[i as usize][1]),
+            B16::from_fn(|i| out[i as usize][2]),
+            B16::from_fn(|i| out[i as usize][3]),
+            B16::from_fn(|i| out[i as usize][4]),
+            B16::from_fn(|i| out[i as usize][5]),
+            B16::from_fn(|i| out[i as usize][6]),
+            B16::from_fn(|i| out[i as usize][7]),
+        ]
     }
 
     #[inline(always)]
