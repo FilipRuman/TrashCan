@@ -3,7 +3,9 @@ use std::ops::{Add, AddAssign};
 use anyhow::anyhow;
 use log::{debug, error, info};
 
-use super::{b8::B8, b16::B16};
+use crate::OPTIMIZATIONS;
+
+use super::{b8::B8, b32::B32};
 
 pub struct SumBitOutput {
     pub sum: bool,
@@ -24,10 +26,10 @@ impl B8 {
         self + B8(1)
     }
 }
-impl B16 {
+impl B32 {
     #[inline(always)]
-    pub fn increment(self) -> B16 {
-        self + B16(1)
+    pub fn increment(self) -> B32 {
+        self + B32(1)
     }
 }
 
@@ -43,19 +45,19 @@ impl Add for B8 {
     }
 }
 
+impl AddAssign for B32 {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
 impl AddAssign for B8 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl AddAssign for B16 {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-impl Add for B16 {
-    type Output = B16;
+impl Add for B32 {
+    type Output = B32;
 
     fn add(self, rhs: Self) -> Self::Output {
         let (sum, carry) = self.sum(rhs, false);
@@ -80,16 +82,20 @@ impl B8 {
     }
 }
 
-impl B16 {
+impl B32 {
     #[inline(always)]
-    pub fn sum(self, b: B16, carry: bool) -> (B16, bool) {
+    pub fn sum(self, b: B32, carry: bool) -> (B32, bool) {
+        if OPTIMIZATIONS {
+            return (B32(self.0 + b.0 + carry as i32), false); //info carry only happens on overflows and then this will panic anyway
+        }
+
         let mut carry = carry;
-        let mut bits = [false; 16];
-        for i in 0..16 {
+        let mut bits = [false; 32];
+        for i in 0..32 {
             let output = sum_bit(self.bit(i), b.bit(i), carry);
             bits[i as usize] = output.sum;
             carry = output.carry;
         }
-        (B16::from_bits(&bits), carry)
+        (B32::from_bits(&bits), carry)
     }
 }

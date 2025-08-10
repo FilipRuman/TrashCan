@@ -1,8 +1,8 @@
 use std::ops::Mul;
 
-use super::{b8::B8, b16::B16};
+use super::{b8::B8, b32::B32};
 
-impl Mul for B16 {
+impl Mul for B32 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {

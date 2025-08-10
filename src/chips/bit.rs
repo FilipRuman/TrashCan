@@ -60,7 +60,7 @@ pub fn d_mux_4(input: bool, sel_1: bool, sel_2: bool) -> (bool, bool, bool, bool
     (input & sel_1, input & !sel_1, input & sel_2, input & !sel_2)
 }
 
-pub fn d_mux8(input: bool, sel_1: bool, sel_2: bool, sel_3: bool) -> [bool; 8] {
+fn d_mux8(input: bool, sel_1: bool, sel_2: bool, sel_3: bool) -> [bool; 8] {
     [
         input & !sel_1 & !sel_2 & !sel_3,
         input & !sel_1 & !sel_2 & sel_3,

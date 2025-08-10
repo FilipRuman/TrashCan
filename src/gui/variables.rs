@@ -7,18 +7,18 @@ use eframe::egui::{
     ahash::{HashMap, HashMapExt},
 };
 
-use crate::chips::{b8::B8, b16::B16};
+use crate::chips::{b8::B8, b32::B32};
 
 use super::MyApp;
 
-pub struct B16Variable {
-    byte: i16,
+pub struct B32Variable {
+    byte: i32,
     dec: String,
     bin: String,
 }
-impl B16Variable {
+impl B32Variable {
     /// updated bin and dec representations of this value
-    pub fn set_byte_and_update(&mut self, val: i16) {
+    pub fn set_byte_and_update(&mut self, val: i32) {
         self.byte = val;
         self.dec = val.to_string();
         self.bin = format!("{:08b}", val);
@@ -42,7 +42,7 @@ impl B8Variable {
 pub struct VariableStore {
     pub bools: HashMap<String, bool>,
     pub b8: HashMap<String, B8Variable>, // byte, decimal text, binary text
-    pub b16: HashMap<String, B16Variable>, // byte, decimal text, binary text
+    pub b32: HashMap<String, B32Variable>, // byte, decimal text, binary text
 }
 
 impl MyApp {
@@ -51,16 +51,16 @@ impl MyApp {
             ui.checkbox(val, name);
         }
 
-        for (name, variable) in self.variables.b16.iter_mut() {
+        for (name, variable) in self.variables.b32.iter_mut() {
             let dec = &mut variable.dec;
             let bin = &mut variable.bin;
             let byte = &mut variable.byte;
             ui.horizontal(|ui| {
                 let response_dec = ui.add(TextEdit::singleline(dec));
                 if response_dec.changed() {
-                    *byte = match i16::from_str_radix(dec as &str, 10) {
+                    *byte = match i32::from_str_radix(dec as &str, 10) {
                         Ok(v) => {
-                            *bin = format!("{:016b}", v);
+                            *bin = format!("{:032b}", v);
                             v
                         }
                         Err(_) => {
@@ -74,7 +74,7 @@ impl MyApp {
                 }
                 let response_bin = ui.add(TextEdit::singleline(bin));
                 if response_bin.changed() {
-                    *byte = match i16::from_str_radix(bin as &str, 2) {
+                    *byte = match i32::from_str_radix(bin as &str, 2) {
                         Ok(v) => {
                             *dec = v.to_string();
                             v
@@ -139,7 +139,7 @@ impl VariableStore {
             bools: HashMap::new(),
             b8: HashMap::new(),
 
-            b16: HashMap::new(),
+            b32: HashMap::new(),
         }
     }
 }
@@ -155,9 +155,9 @@ pub trait Variable: Sized {
     /// Err if key(name) doesn't exists in that HashMap
     fn read(store: &VariableStore, name: &str) -> Result<Self>;
 }
-impl Variable for B16 {
+impl Variable for B32 {
     fn add(self, store: &mut VariableStore, name: &str) -> Result<()> {
-        let hash_map = &mut store.b16;
+        let hash_map = &mut store.b32;
         if hash_map.contains_key(name) {
             return Err(anyhow!(
                 "variable with name: {} was already present {} hashmap",
@@ -167,7 +167,7 @@ impl Variable for B16 {
         }
         hash_map.insert(
             name.to_string(),
-            B16Variable {
+            B32Variable {
                 byte: self.into(),
                 dec: self.to_string(),
                 bin: format!("{:08b}", self.as_ref()),
@@ -176,7 +176,7 @@ impl Variable for B16 {
         Ok(())
     }
     fn write(self, store: &mut VariableStore, name: &str) -> Result<()> {
-        let hash_map = &mut store.b16;
+        let hash_map = &mut store.b32;
         match hash_map.get_mut(name) {
             Some(input) => {
                 input.set_byte_and_update(self.into());
@@ -191,7 +191,7 @@ impl Variable for B16 {
     }
 
     fn read(store: &VariableStore, name: &str) -> Result<Self> {
-        let hash_map = &store.b16;
+        let hash_map = &store.b32;
         match hash_map.get(name) {
             Some(val) => Ok(val.byte.into()),
             None => Err(anyhow!(

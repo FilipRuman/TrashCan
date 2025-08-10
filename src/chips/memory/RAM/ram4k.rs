@@ -1,4 +1,4 @@
-use crate::chips::{b16::B16, bit::d_mux8};
+use crate::chips::b32::B32;
 
 use super::{get_selectors, ram512::RAM512};
 
@@ -14,28 +14,37 @@ impl RAM4k {
 
     pub const RAM_START_INDEX: u8 = 3 * 3;
 
-    pub fn read(&self, addr: B16) -> B16 {
+    pub fn read(&self, addr: B32) -> B32 {
         let (sel_1, sel_2, sel_3) = get_selectors(addr, Self::RAM_START_INDEX);
-        self.modules[0].read(addr).mux8(
-            self.modules[1].read(addr),
-            self.modules[2].read(addr),
-            self.modules[3].read(addr),
-            self.modules[4].read(addr),
-            self.modules[5].read(addr),
-            self.modules[6].read(addr),
-            self.modules[7].read(addr),
+        B32::mux8_fn(
+            || self.modules[0].read(addr),
+            || self.modules[1].read(addr),
+            || self.modules[2].read(addr),
+            || self.modules[3].read(addr),
+            || self.modules[4].read(addr),
+            || self.modules[5].read(addr),
+            || self.modules[6].read(addr),
+            || self.modules[7].read(addr),
             sel_1,
             sel_2,
             sel_3,
         )
     }
 
-    pub fn write(&self, data: B16, addr: B16, store: bool) {
+    pub fn write(&self, data: B32, addr: B32, store: bool) {
         let (sel_1, sel_2, sel_3) = get_selectors(addr, Self::RAM_START_INDEX);
-        let dmux = d_mux8(store, sel_1, sel_2, sel_3);
-
-        for i in 0..8 {
-            self.modules[i].write(data, addr, dmux[i]);
-        }
+        data.d_mux8_fn(
+            sel_1,
+            sel_2,
+            sel_3,
+            |data| self.modules[0].write(data, addr, store),
+            |data| self.modules[1].write(data, addr, store),
+            |data| self.modules[2].write(data, addr, store),
+            |data| self.modules[3].write(data, addr, store),
+            |data| self.modules[4].write(data, addr, store),
+            |data| self.modules[5].write(data, addr, store),
+            |data| self.modules[6].write(data, addr, store),
+            |data| self.modules[7].write(data, addr, store),
+        );
     }
 }

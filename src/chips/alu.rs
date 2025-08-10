@@ -1,15 +1,15 @@
-use super::b16::B16;
+use super::b32::B32;
 
 #[derive(Clone, Copy, Debug)]
 pub struct AluOut {
-    pub val: B16,
+    pub val: B32,
     pub zero: bool,
 
     pub negative: bool,
 }
 pub fn alu(
-    mut x: B16,
-    mut y: B16,
+    mut x: B32,
+    mut y: B32,
     zero_x: bool,
     negate_x: bool,
     zero_y: bool,
