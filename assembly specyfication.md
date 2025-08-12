@@ -253,3 +253,7 @@ Suspends execution for the number of cycles specified in `x`.
 
 **Operation:**  
 Generates a random 32-bit number and stores it in `x`.
+
+syscall 
+
+segmentation
