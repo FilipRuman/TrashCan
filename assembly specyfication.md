@@ -61,9 +61,10 @@ Starts a new thread with ID from `x` and begins execution at address in `y`.
 ### 0x03 — `intr` — Interrupt Thread
 **Format:**  
 ```
-00000011 xxxxxxxx ||||||||||||||||||||||||||  
+00000011 xxxxxxxx yyyyyyyy ||||||||||||||||||  
 ```
 - **x:** Thread ID to interrupt.  
+- **y:** interrupt id.  
 
 **Operation:**  
 Sends an interrupt to the specified thread.
@@ -76,7 +77,7 @@ Sends an interrupt to the specified thread.
 00000100 xxxxxxxx ||||||||||||||||||||||||||  
 ```
 - **x:** Register holding address of IDT.  
-
+ 
 **Operation:**  
 Sets the CPU's IDT pointer to the address in `x`.
 
@@ -85,10 +86,10 @@ Sets the CPU's IDT pointer to the address in `x`.
 ### 0x05 — `phrp` — Peripheral Command
 **Format:**  
 ```
-00000101 xxxxxxxx yyyy|||| ||||||||||||||||  
+00000101 xxxxxxxx yyyyyyyy ||||||||||||||||  
 ```
 - **x:** Data register.  
-- **y:** Peripheral ID (4 bits).  
+- **y:** Peripheral ID (8 bits).  
 
 **Peripheral IDs:**  
 ```
@@ -244,16 +245,48 @@ Suspends execution for the number of cycles specified in `x`.
 
 ## Special
 
-### 0x37 — `rnd` — Generate Random Number
+### 0x37 — `rng` —  Random Number Generation
 **Format:**  
 ```
-00110111 xxxxxxxx ||||||||||||||||||||||||||  
+00110111 xxxxxxxx yyyyyyyy zzzzzzzz ||  
 ```
 - **x:** Destination register.  
 
+- **y:** min value register.  
+
+
+- **z:** max value register.  
+
 **Operation:**  
-Generates a random 32-bit number and stores it in `x`.
+Generates a random 32-bit number in range `y` - `z` and stores it in `x`.
 
-syscall 
 
-segmentation
+### 0x38 — `syscall` — Perform System Call
+**Format:**  
+00111000 xxxxxxxx yyyyyyyy ||||||||||||||||  
+
+- **x:** Register containing system call ID.  
+- **y:** Register containing pointer to argument block (optional, OS-defined).  
+
+---
+
+## Stack Operations
+
+push 
+
+pop
+
+call 
+
+ret
+
+---
+
+## Special registers:
+RBP
+RSP
+
+
+
+
+

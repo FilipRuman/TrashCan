@@ -10,5 +10,6 @@ eframe = {version ="0.32", features= [] }
 anyhow =  "1.0"
 colog = "1.3"
 log = "0.4"
-[env]
-RUSTFLAGS = "-Awarnings"
+crossbeam-queue= "0.3"
+# [env]
+# RUSTFLAGS = "-Awarnings"

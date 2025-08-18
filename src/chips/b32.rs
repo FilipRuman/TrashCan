@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, BitAnd, BitXor, Not},
+    ops::{Add, BitAnd, BitXor, Not, Shl, Shr},
 };
 
 use log::debug;
@@ -19,6 +19,20 @@ impl From<i32> for B32 {
 impl Display for B32 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+impl Shl for B32 {
+    type Output = Self;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        self.shift_bits(-rhs.0 as i8)
+    }
+}
+impl Shr for B32 {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        self.shift_bits(rhs.0 as i8)
     }
 }
 impl From<B32> for i32 {
@@ -49,13 +63,14 @@ impl BitXor for B32 {
         B32(self.0 ^ rhs.0)
     }
 }
+
 impl BitAnd for B32 {
     type Output = Self;
 
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self::Output {
         if OPTIMIZATIONS {
-            return self & rhs;
+            return B32(self.0 & rhs.0);
         }
         Self::from_fn(|i| self.bit(i) & rhs.bit(i))
     }
@@ -164,8 +179,6 @@ impl B32 {
     }
     #[inline(always)]
 
-    /// Works like mux sle=true-> b instead of self
-    /// true left false right
     pub fn mux8_fn_in<
         A: Fn(B32) -> B32,
         B: Fn(B32) -> B32,
@@ -227,8 +240,8 @@ impl B32 {
         })
     }
 
-    /// Works like mux sle=true-> b instead of self
-    /// true left false right
+    // 6 + 6 + 6 +
+
     pub fn mux8_fn<
         A: Fn() -> B32,
         B: Fn() -> B32,
@@ -250,6 +263,9 @@ impl B32 {
         sel_1: bool,
         sel_2: bool,
         sel_3: bool,
+        sel_4: bool,
+        sel_5: bool,
+        sel_6: bool,
     ) -> B32 {
         if OPTIMIZATIONS {
             return match (sel_1, sel_2, sel_3) {
@@ -410,8 +426,25 @@ impl B32 {
         }
         B32::from_bits(&bits)
     }
+    #[inline(always)]
+    pub fn bits(self) -> [bool; 8] {
+        let value: u8 = 42;
+
+        let mut bits = [false; 8];
+        for i in 0..8 {
+            bits[7 - i] = ((self >> B32(i as i32)) & B32(1)).0 == 1; // MSB at index 0
+        }
+        bits
+    }
 
     // this is legal because I can replace it with just spamming set_bit
+    #[inline(always)]
+    pub fn from_bits_vec(bits: Vec<bool>) -> B32 {
+        B32(bits
+            .iter()
+            .enumerate()
+            .fold(0i32, |acc, (i, &bit)| acc | ((bit as i32) << i)))
+    }
     #[inline(always)]
     pub fn from_bits(bits: &[bool; 32]) -> B32 {
         B32(bits

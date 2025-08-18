@@ -1,5 +1,6 @@
 #![allow(warnings)]
 use std::{
+    ffi::c_str,
     sync::{OnceLock, atomic::AtomicBool},
     time::{Duration, Instant},
 };
@@ -14,9 +15,12 @@ use chips::{
 mod chips;
 mod error;
 pub mod gui;
+pub mod threads;
+pub mod instructions;
 use anyhow::{Context, Result};
 use gui::MyApp;
 use log::*;
+use threads::{clock_cycle, spawn_thread};
 use tokio::task;
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,61 +52,23 @@ pub fn init(app: &mut MyApp) -> Result<()> {
 
     info!("init memory");
     let start = Instant::now();
-    MEMORY_TEST.get_or_init(|| Box::new(RAM256k::new()));
+    MEMORY.get_or_init(|| Box::new(RAM256k::new()));
     let elapsed = start.elapsed();
     info!("initialized memory: {:?}", elapsed);
 
-    tokio::task::spawn(clock_cycle());
-
+    for i in 0..6 {
+        threads::spawn_thread();
+    }
     Ok(())
 }
 
 // INFO: this makes my code behave less like connected logic gates but makes use of language, more optimal
 // operations
 pub const OPTIMIZATIONS: bool = true;
-pub static MEMORY_TEST: OnceLock<Box<RAM256k>> = OnceLock::new();
-pub static CLOCK_MS: u64 = 1;
-
-pub async fn clock_cycle() {
-    loop {
-        let memory = MEMORY_TEST
-            .get()
-            .expect("gui loop run before init function or memory was not yet initialized");
-
-        let start_w1 = Instant::now();
-        memory.write(B32(32), B32(0), true);
-        let elapsed_w1 = start_w1.elapsed();
-        info!("write 1 memory: {:?}", elapsed_w1);
-
-        let start_r1 = Instant::now();
-        memory.read(B32(0));
-        let elapsed_r1 = start_r1.elapsed();
-        info!("read 1 memory: {:?} {:?}", elapsed_r1, memory.read(B32(0)));
-
-        let start_w = Instant::now();
-
-        async_write().await;
-
-        tokio::time::sleep(Duration::from_millis(CLOCK_MS)).await;
-
-        tokio::time::sleep(Duration::from_millis(CLOCK_MS)).await;
-        let elapsed_w = start_w.elapsed();
-        info!("write memory: {:?}", elapsed_w);
-
-        let start_r = Instant::now();
-        for i in 0..256000 {
-            let b16 = B32(i);
-            assert_eq!(memory.read(b16), b16);
-        }
-        let elapsed_w = start_w.elapsed();
-        info!("read memory: {:?}", elapsed_w);
-
-        tokio::time::sleep(Duration::from_secs(800000000000000000)).await;
-    }
-}
+pub static MEMORY: OnceLock<Box<RAM256k>> = OnceLock::new();
 
 pub fn gui_loop(app: &mut MyApp) -> Result<()> {
-    let memory = MEMORY_TEST
+    let memory = MEMORY
         .get()
         .expect("gui loop run before init function or memory was not yet initialized");
     let out = memory.read(app.variables.read("addr")?);
@@ -111,7 +77,7 @@ pub fn gui_loop(app: &mut MyApp) -> Result<()> {
 }
 
 pub async fn async_write() {
-    let memory = MEMORY_TEST
+    let memory = MEMORY
         .get()
         .expect("gui loop run before init function or memory was not yet initialized");
 

@@ -1,7 +1,7 @@
 use std::{
     fmt::Display,
     iter::from_fn,
-    ops::{BitAnd, BitXor, Not},
+    ops::{BitAnd, BitXor, Not, Shl, Shr},
 };
 
 use super::bit::{d_mux, mux};
@@ -11,6 +11,20 @@ pub struct B8(pub i8);
 impl From<i8> for B8 {
     fn from(value: i8) -> Self {
         B8(value)
+    }
+}
+impl Shl for B8 {
+    type Output = Self;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        self.shift_bits(-rhs.0 as i8)
+    }
+}
+impl Shr for B8 {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        self.shift_bits(rhs.0 as i8)
     }
 }
 impl Display for B8 {
@@ -114,6 +128,16 @@ impl B8 {
     pub fn bit(self, i: u8) -> bool {
         debug_assert!(i < 8);
         (self.0 >> i) & 1 != 0
+    }
+    #[inline(always)]
+    pub fn bits(self) -> [bool; 8] {
+        let value: u8 = 42;
+
+        let mut bits = [false; 8];
+        for i in 0..8 {
+            bits[7 - i] = ((self >> B8(i as i8)) & B8(1)).0 == 1; // MSB at index 0
+        }
+        bits
     }
     #[inline(always)]
     pub fn set_bit(&mut self, i: u8, value: bool) {

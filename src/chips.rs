@@ -5,3 +5,4 @@ pub mod b8;
 pub mod bit;
 pub mod memory;
 pub mod multiplication;
+pub mod division;
