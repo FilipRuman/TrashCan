@@ -4,12 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cpu = {path = "cpu"}
+assembler= {path = "assembler"}
 tokio = { version = "1.47.1", features = ["full"] }
-lazy_static = "1.5"
-eframe = {version ="0.32", features= [] }
 anyhow =  "1.0"
 colog = "1.3"
 log = "0.4"
-crossbeam-queue= "0.3"
-# [env]
-# RUSTFLAGS = "-Awarnings"

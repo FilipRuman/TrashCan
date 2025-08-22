@@ -1,6 +1,9 @@
 pub mod RAM;
 
-use std::sync::atomic::{AtomicBool, AtomicI16, AtomicI32, AtomicU16};
+use std::{
+    fs::write,
+    sync::atomic::{AtomicBool, AtomicI16, AtomicI32, AtomicU16},
+};
 
 use log::info;
 
@@ -32,6 +35,13 @@ const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCs
 
 pub struct B32Register {
     bit_memory: AtomicI32,
+}
+impl Clone for B32Register {
+    fn clone(&self) -> Self {
+        Self {
+            bit_memory: AtomicI32::new(self.bit_memory.load(ORDERING)),
+        }
+    }
 }
 impl B32Register {
     pub fn new() -> Self {
@@ -65,7 +75,6 @@ impl Counter {
             register: B32Register::new(),
         }
     }
-    /// set_reset: bool -> true: set false:reset
     pub fn write(&self, set: bool, reset: bool, increment: bool, data: B32, store: bool) {
         let input = B32::mux3x3_fn(
             || data,
@@ -77,6 +86,18 @@ impl Counter {
         );
 
         self.register.write(input, store);
+    }
+    pub fn set(&self, data: B32, store: bool) {
+        const SET: bool = true;
+        const RESET: bool = false;
+        const INCREMENT: bool = false;
+        self.write(SET, RESET, INCREMENT, data, store);
+    }
+    pub fn increment(&self, store: bool) {
+        const INCREMENT: bool = true;
+        const RESET: bool = false;
+        const SET: bool = false;
+        self.write(SET, RESET, INCREMENT, B32(0), store);
     }
 
     pub fn read(&self) -> B32 {

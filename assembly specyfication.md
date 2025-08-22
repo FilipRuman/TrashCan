@@ -63,7 +63,7 @@ Starts a new thread with ID from `x` and begins execution at address in `y`.
 ```
 00000011 xxxxxxxx yyyyyyyy ||||||||||||||||||  
 ```
-- **x:** Thread ID to interrupt.  
+- **x:** Thread index to interrupt.  
 - **y:** interrupt id.  
 
 **Operation:**  
@@ -79,7 +79,7 @@ Sends an interrupt to the specified thread.
 - **x:** Register holding address of IDT.  
  
 **Operation:**  
-Sets the CPU's IDT pointer to the address in `x`.
+Sets the CPU's IDT pointer to the address in `x` and enables interrupts on this thread.
 
 ---
 
@@ -205,15 +205,15 @@ Sets the CPU's page table base to the address in `x`.
 ---
 
 ## Comparison Operations
-> All comparisons store the result (`0` or `1`) into register `x`.
+> All comparisons store the result (`0` or `1`) into register `z`.
 
 | Command | ID   | Format                                         | Description |
 |---------|------|------------------------------------------------|-------------|
-| `eq`    | 0x30 | `00110000 xxxxxxxx yyyyyyyy`                    | `x = (x == y)` |
-| `gte`   | 0x31 | `00110001 xxxxxxxx yyyyyyyy`                    | `x = (x >= y)` |
-| `lte`   | 0x32 | `00110010 xxxxxxxx yyyyyyyy`                    | `x = (x <= y)` |
-| `lt`    | 0x33 | `00110011 xxxxxxxx yyyyyyyy`                    | `x = (x < y)`  |
-| `gt`    | 0x34 | `00110100 xxxxxxxx yyyyyyyy`                    | `x = (x > y)`  |
+| `eq`    | 0x30 | `00110000 xxxxxxxx yyyyyyyy xxxxxxxx`                  | `x = (x == y)` |
+| `gte`   | 0x31 | `00110001 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x >= y)` |
+| `lte`   | 0x32 | `00110010 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x <= y)` |
+| `lt`    | 0x33 | `00110011 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x < y)`  |
+| `gt`    | 0x34 | `00110100 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x > y)`  |
 
 ---
 
@@ -265,7 +265,7 @@ Generates a random 32-bit number in range `y` - `z` and stores it in `x`.
 **Format:**  
 00111000 xxxxxxxx yyyyyyyy ||||||||||||||||  
 
-- **x:** Register containing system call ID.  
+- **x:** Register containing system call index.  
 - **y:** Register containing pointer to argument block (optional, OS-defined).  
 
 ---

@@ -6,6 +6,7 @@ pub mod ram4k;
 pub mod ram512;
 pub mod ram64;
 pub mod ram8;
+pub mod ram256;
 
 pub fn get_selectors(addr: B32, start_index: u8) -> (bool, bool, bool) {
     let sel_1 = addr.bit(start_index);

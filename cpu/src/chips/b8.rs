@@ -8,6 +8,7 @@ use super::bit::{d_mux, mux};
 
 #[derive(Clone, Copy, Debug)]
 pub struct B8(pub i8);
+impl Eq for B8 {}
 impl From<i8> for B8 {
     fn from(value: i8) -> Self {
         B8(value)

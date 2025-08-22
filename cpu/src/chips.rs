@@ -6,3 +6,4 @@ pub mod bit;
 pub mod memory;
 pub mod multiplication;
 pub mod division;
+pub mod thread;

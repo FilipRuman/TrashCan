@@ -1,9 +1,7 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Sub};
 
 use anyhow::anyhow;
 use log::{debug, error, info};
-
-use crate::OPTIMIZATIONS;
 
 use super::{b8::B8, b32::B32};
 
@@ -56,14 +54,21 @@ impl AddAssign for B8 {
     }
 }
 
+impl Sub for B32 {
+    type Output = B32;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        rhs.negate();
+        let (sum, carry) = self.sum(rhs, false);
+
+        sum
+    }
+}
 impl Add for B32 {
     type Output = B32;
 
     fn add(self, rhs: Self) -> Self::Output {
         let (sum, carry) = self.sum(rhs, false);
-        // if carry {
-        //     error!("adding {} and {} overflowed the b16", self, rhs);
-        // }
         sum
     }
 }
@@ -84,11 +89,13 @@ impl B8 {
 
 impl B32 {
     #[inline(always)]
+    #[cfg(feature = "fast")]
     pub fn sum(self, b: B32, carry: bool) -> (B32, bool) {
-        if OPTIMIZATIONS {
-            return (B32(self.0 + b.0 + carry as i32), false); //info carry only happens on overflows and then this will panic anyway
-        }
-
+        (B32(self.0 + b.0 + carry as i32), false) //info carry only happens on overflows and then this will panic anyway
+    }
+    #[inline(always)]
+    #[cfg(not(feature = "fast"))]
+    pub fn sum(self, b: B32, carry: bool) -> (B32, bool) {
         let mut carry = carry;
         let mut bits = [false; 32];
         for i in 0..32 {
