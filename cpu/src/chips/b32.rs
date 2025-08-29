@@ -12,7 +12,7 @@ use super::{
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct B32(pub i32);
+pub struct B32(pub u32);
 impl BitOr for B32 {
     type Output = Self;
 
@@ -26,8 +26,8 @@ impl BitOr for B32 {
         B32::from_fn(|i| self.bit(i) | rhs.bit(i))
     }
 }
-impl From<i32> for B32 {
-    fn from(value: i32) -> Self {
+impl From<u32> for B32 {
+    fn from(value: u32) -> Self {
         B32(value)
     }
 }
@@ -40,7 +40,7 @@ impl Shl for B32 {
     type Output = Self;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        self.shift_bits(-rhs.0 as i8)
+        self.shift_bits(-(rhs.0 as i8))
     }
 }
 impl Shr for B32 {
@@ -50,13 +50,13 @@ impl Shr for B32 {
         self.shift_bits(rhs.0 as i8)
     }
 }
-impl From<B32> for i32 {
+impl From<B32> for u32 {
     fn from(value: B32) -> Self {
         value.0
     }
 }
-impl AsRef<i32> for B32 {
-    fn as_ref(&self) -> &i32 {
+impl AsRef<u32> for B32 {
+    fn as_ref(&self) -> &u32 {
         &self.0
     }
 }
@@ -75,15 +75,15 @@ impl PartialOrd for B32 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         let sub = *self - *other;
 
-        let out = B32(Ordering::Less as i32).mux3x3(
-            B32(Ordering::Equal as i32),
-            B32(Ordering::Greater as i32),
+        let out = B32(Ordering::Less as u32).mux3x3(
+            B32(Ordering::Equal as u32),
+            B32(Ordering::Greater as u32),
             sub.negative(),
             sub.negative(),
             sub.negative(),
         );
 
-        // conversion form i32 to enum
+        // conversion form u32 to enum
         return Some(match out.0 {
             -1 => Ordering::Less,
             0 => Ordering::Equal,
@@ -188,7 +188,7 @@ impl B32 {
             index < 4,
             "getting byte at higher index than it is possible in b32 (has 4 bytes, so index < 4)"
         );
-        B8(((self.0 >> (index * 8)) & 0xFF) as i8)
+        B8(((self.0 >> (index * 8)) & 0xFF) as u8)
     }
 
     #[inline(always)]
@@ -485,7 +485,7 @@ impl B32 {
 
         let mut bits = [false; 8];
         for i in 0..8 {
-            bits[7 - i] = ((self >> B32(i as i32)) & B32(1)).0 == 1; // MSB at index 0
+            bits[7 - i] = ((self >> B32(i as u32)) & B32(1)).0 == 1; // MSB at index 0
         }
         bits
     }
@@ -496,14 +496,14 @@ impl B32 {
         B32(bits
             .iter()
             .enumerate()
-            .fold(0i32, |acc, (i, &bit)| acc | ((bit as i32) << i)))
+            .fold(0u32, |acc, (i, &bit)| acc | ((bit as u32) << i)))
     }
     #[inline(always)]
     pub fn from_bits(bits: &[bool; 32]) -> B32 {
         B32(bits
             .iter()
             .enumerate()
-            .fold(0i32, |acc, (i, &bit)| acc | ((bit as i32) << i)))
+            .fold(0u32, |acc, (i, &bit)| acc | ((bit as u32) << i)))
     }
 
     pub fn from_bytes(bytes: [B8; 4]) -> B32 {

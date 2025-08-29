@@ -13,13 +13,13 @@ use chips::{
     thread::{self, instructions::Instruction},
 };
 
-mod chips;
+pub mod chips;
 mod error;
 pub mod gui;
 pub(crate) mod peripherals;
 pub mod program_loader;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Ok, Result};
 use clap::Parser;
 use gui::MyApp;
 use log::*;
@@ -33,14 +33,21 @@ struct Args {
 }
 
 pub async fn main() -> Result<()> {
-    if let Err(err) = gui::init_app_gui() {
+    if let Err(err) = init().await.context("encountered error while running CPU:") {
+        error::handle_error(err);
+    }
+
+    if let Err(err) = gui::init_app_gui()
+        .await
+        .context("encountered error while running GUI:")
+    {
         error::handle_error(err);
     };
 
     Ok(())
 }
 
-pub fn init(app: &mut MyApp) -> Result<()> {
+pub async fn init() -> Result<()> {
     let args = Args::parse();
 
     info!("init memory");
@@ -49,31 +56,41 @@ pub fn init(app: &mut MyApp) -> Result<()> {
     let elapsed = start.elapsed();
     info!("initialized memory: {:?}", elapsed);
 
-    // [ 'H' = 0x48 ][ 'I' = 0x49 ][ '\n' = 0x0A ][ 0x00 padding ]
-    let packed_hi = 0x0A4948;
-    test_load_memory(vec![
-        Instruction::Set(B8(0)).into(),
-        B32(packed_hi),
-        Instruction::Set(B8(1)).into(),
-        B32(0),
-        Instruction::Phrp(B8(1), B8(0)).into(),
-        Instruction::Halt().into(),
-    ]);
-
     let start_addr = B32(0);
+    load_memory_from_file("./programs/test.bin", start_addr).await?;
+
     thread::spawn_threads(args.threads);
 
     tokio::spawn(thread::THREADS.get().unwrap()[0].run_loop());
     Ok(())
 }
+pub async fn load_memory_from_file(path: &str, memory_load_base_addr: B32) -> Result<()> {
+    let buf = tokio::fs::read(path).await.with_context(|| {
+        format!("encountered error while opening a file to load it's contents to a memory: {path}")
+    })?;
+
+    // Make sure size is multiple of 4
+    assert!(buf.len() % 4 == 0);
+
+    for (i, chunk) in buf.chunks_exact(4).enumerate() {
+        let b32 = B32(u32::from_le_bytes(chunk.try_into().unwrap()));
+
+        MEMORY
+            .get()
+            .unwrap()
+            .write(b32, B32(i as u32) + memory_load_base_addr, true);
+    }
+
+    info!("loaded file: '{path}' into memory!");
+
+    Ok(())
+}
 pub fn test_load_memory(data: Vec<B32>) {
     for (addr, data) in data.iter().enumerate() {
-        MEMORY.get().unwrap().write(*data, B32(addr as i32), true);
+        MEMORY.get().unwrap().write(*data, B32(addr as u32), true);
     }
 }
 
-// INFO: this makes my code behave less like connected logic gates but makes use of language, more optimal
-// operations
 pub static MEMORY: OnceLock<Box<RAM256k>> = OnceLock::new();
 
 pub fn gui_loop(app: &mut MyApp) -> Result<()> {

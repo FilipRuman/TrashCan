@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use log::*;
-use std::{any::type_name, i8, ops::Deref, str};
+use std::{any::type_name, u8, ops::Deref, str};
 
 use eframe::egui::{
     self, TextEdit,
@@ -12,26 +12,26 @@ use crate::chips::{b8::B8, b32::B32};
 use super::MyApp;
 
 pub struct B32Variable {
-    byte: i32,
+    byte: u32,
     dec: String,
     bin: String,
 }
 impl B32Variable {
     /// updated bin and dec representations of this value
-    pub fn set_byte_and_update(&mut self, val: i32) {
+    pub fn set_byte_and_update(&mut self, val: u32) {
         self.byte = val;
         self.dec = val.to_string();
         self.bin = format!("{:08b}", val);
     }
 }
 pub struct B8Variable {
-    byte: i8,
+    byte: u8,
     dec: String,
     bin: String,
 }
 impl B8Variable {
     /// updated bin and dec representations of this value
-    pub fn set_byte_and_update(&mut self, val: i8) {
+    pub fn set_byte_and_update(&mut self, val: u8) {
         self.byte = val;
         self.dec = val.to_string();
         self.bin = format!("{:08b}", val);
@@ -58,7 +58,7 @@ impl MyApp {
             ui.horizontal(|ui| {
                 let response_dec = ui.add(TextEdit::singleline(dec));
                 if response_dec.changed() {
-                    *byte = match i32::from_str_radix(dec as &str, 10) {
+                    *byte = match u32::from_str_radix(dec as &str, 10) {
                         Ok(v) => {
                             *bin = format!("{:032b}", v);
                             v
@@ -74,7 +74,7 @@ impl MyApp {
                 }
                 let response_bin = ui.add(TextEdit::singleline(bin));
                 if response_bin.changed() {
-                    *byte = match i32::from_str_radix(bin as &str, 2) {
+                    *byte = match u32::from_str_radix(bin as &str, 2) {
                         Ok(v) => {
                             *dec = v.to_string();
                             v
@@ -98,7 +98,7 @@ impl MyApp {
             ui.horizontal(|ui| {
                 let response_dec = ui.add(TextEdit::singleline(dec));
                 if response_dec.changed() {
-                    *byte = match i8::from_str_radix(dec as &str, 10) {
+                    *byte = match u8::from_str_radix(dec as &str, 10) {
                         Ok(v) => {
                             *bin = format!("{:08b}", v);
                             v
@@ -114,7 +114,7 @@ impl MyApp {
                 }
                 let response_bin = ui.add(TextEdit::singleline(bin));
                 if response_bin.changed() {
-                    *byte = match i8::from_str_radix(bin as &str, 2) {
+                    *byte = match u8::from_str_radix(bin as &str, 2) {
                         Ok(v) => {
                             *dec = v.to_string();
                             v

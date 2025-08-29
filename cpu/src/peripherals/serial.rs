@@ -12,7 +12,7 @@ impl Serial {
     pub fn call_serial(&mut self, data: B32) {
         for i in 0..4 {
             let value = data.byte(i);
-            if value == B8(b'\n' as i8) {
+            if value == B8(b'\n' as u8) {
                 self.write_serial();
                 continue;
             }

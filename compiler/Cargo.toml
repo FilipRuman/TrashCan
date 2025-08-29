@@ -1,12 +1,9 @@
 [package]
-name = "trash_can"
+name = "compiler"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cpu = {path = "cpu"}
-assembler= {path = "assembler"}
-compiler = {path = "compiler"}
 tokio = { version = "1.47.1", features = ["full"] }
 anyhow =  "1.0"
 colog = "1.3"

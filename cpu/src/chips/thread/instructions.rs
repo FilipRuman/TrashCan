@@ -7,6 +7,7 @@ pub mod memory_manipulation;
 pub mod special;
 pub(crate) mod stack;
 
+use anyhow::Result;
 use lazy_static::lazy_static;
 use log::{error, info};
 
@@ -16,7 +17,7 @@ use crate::chips::{
 };
 
 use super::Thread;
-#[repr(i32)]
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Instruction {
     Jmp(B8),
@@ -468,21 +469,21 @@ impl From<Instruction> for B32 {
 }
 
 impl Thread {
-    pub async fn run_instruction(&self, instruction: Instruction, run: bool) {
+    pub async fn run_instruction(&self, instruction: Instruction, run: bool) -> Result<()> {
         match instruction {
             Instruction::Jmp(register_jump_target) => self.Jmp(register_jump_target, run),
             Instruction::Jmpc(register_jump_target, register_condition) => {
                 self.Jmpc(register_jump_target, register_condition, run)
             }
             Instruction::Init(start_address_register, register_thread_index) => {
-                self.Init(start_address_register, register_thread_index, run)
+                self.Init(start_address_register, register_thread_index, run)?
             }
             Instruction::Intr(thread_index_register, interrupt_type_index_register) => {
                 self.Intr(thread_index_register, interrupt_type_index_register, run)
             }
             Instruction::Idt(address_register) => self.Idt(address_register, run),
             Instruction::Phrp(index_register, data_register) => {
-                self.Phrp(index_register, data_register, run).await
+                self.Phrp(index_register, data_register, run).await?
             }
             Instruction::Read(source_address_register, destination_register) => {
                 self.Read(source_address_register, destination_register, run)
@@ -513,16 +514,16 @@ impl Thread {
                 self.Eq(a_register, b_register, out_register, run)
             }
             Instruction::Gte(a_register, b_register, out_register) => {
-                self.Eq(a_register, b_register, out_register, run)
+                self.Gte(a_register, b_register, out_register, run)
             }
             Instruction::Lte(a_register, b_register, out_register) => {
-                self.Eq(a_register, b_register, out_register, run)
+                self.Lte(a_register, b_register, out_register, run)
             }
             Instruction::Lt(a_register, b_register, out_register) => {
-                self.Eq(a_register, b_register, out_register, run)
+                self.Lt(a_register, b_register, out_register, run)
             }
             Instruction::Gt(a_register, b_register, out_register) => {
-                self.Eq(a_register, b_register, out_register, run)
+                self.Gt(a_register, b_register, out_register, run)
             }
             Instruction::Halt() => self.Halt(run),
             Instruction::Sleep(length_register) => self.Sleep(length_register, run).await,
@@ -537,5 +538,6 @@ impl Thread {
             Instruction::Call(address_register) => self.Call(address_register, run),
             Instruction::Ret() => self.Ret(run),
         }
+        Ok(())
     }
 }

@@ -32,7 +32,7 @@ Jumps to the address stored in register `x`.
 
 ---
 
-### 0x01 — `cjmp` — Conditional Jump
+### 0x01 — `jmpc` — Conditional Jump
 **Format:**  
 ```
 00000001 xxxxxxxx yyyyyyyy ||||||||||||||||  
@@ -136,7 +136,7 @@ Writes value from `y` to memory at address in `x`.
 - **y:** Destination register.  
 
 **Operation:**  
-Copies value from `x` into `y`.
+Copies value from `x` registry into `y` registry.
 
 ---
 
@@ -186,8 +186,8 @@ Sets the CPU's page table base to the address in `x`.
 | `div`   | 0x12 | `00010010 xxxxxxxx yyyyyyyy`                    | `x = x / y` |
 | `mul`   | 0x13 | `00010011 xxxxxxxx yyyyyyyy`                    | `x = x * y` |
 | `mod`   | 0x14 | `00010100 xxxxxxxx yyyyyyyy`                    | `x = x % y` |
+| `abs`   | 0x16 | `00010110 xxxxxxxx`                             | `x = abs(x)`   |
 | `neg`   | 0x15 | `00010101 xxxxxxxx`                             | `x = -x`    |
-| `abs`   | 0x16 | `00010110 xxxxxxxx`                             | `x = |x|`   |
 
 ---
 
@@ -209,11 +209,11 @@ Sets the CPU's page table base to the address in `x`.
 
 | Command | ID   | Format                                         | Description |
 |---------|------|------------------------------------------------|-------------|
-| `eq`    | 0x30 | `00110000 xxxxxxxx yyyyyyyy xxxxxxxx`                  | `x = (x == y)` |
-| `gte`   | 0x31 | `00110001 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x >= y)` |
-| `lte`   | 0x32 | `00110010 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x <= y)` |
-| `lt`    | 0x33 | `00110011 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x < y)`  |
-| `gt`    | 0x34 | `00110100 xxxxxxxx yyyyyyyy xxxxxxxx`                    | `x = (x > y)`  |
+| `eq`    | 0x30 | `00110000 xxxxxxxx yyyyyyyy zzzzzzzz`                 | `z = (x == y)` |
+| `gte`   | 0x31 | `00110001 xxxxxxxx yyyyyyyy zzzzzzzz`                   | `z = (x >= y)` |
+| `lte`   | 0x32 | `00110010 xxxxxxxx yyyyyyyy zzzzzzzz`                    | `z = (x <= y)` |
+| `lt`    | 0x33 | `00110011 xxxxxxxx yyyyyyyy zzzzzzzz`                    | `z = (x < y)`  |
+| `gt`    | 0x34 | `00110100 xxxxxxxx yyyyyyyy zzzzzzzz`                    | `z = (x > y)`  |
 
 ---
 

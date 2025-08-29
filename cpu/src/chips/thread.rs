@@ -1,4 +1,8 @@
 pub mod instructions;
+use anyhow::{Context, Ok, Result, anyhow};
+use crossbeam_queue::ArrayQueue;
+use instructions::Instruction;
+use log::{debug, info};
 use std::{
     cell::OnceCell,
     sync::{
@@ -8,44 +12,43 @@ use std::{
     time::Duration,
 };
 
-use crossbeam_queue::ArrayQueue;
-use instructions::Instruction;
-use log::{debug, info};
-
 use crate::{
     MEMORY,
     chips::{
         b32::B32,
         memory::{Counter, RAM::ram256::RAM256},
     },
+    error::handle_error,
 };
 
 pub static CLOCK_MS: u64 = 1;
 
 use std::convert::TryFrom;
 
-#[repr(i32)]
+use super::b8::B8;
+
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Interrupt {
     Timer = 0,
     Keyboard = 1,
     Mouse = 2,
 }
-impl From<Interrupt> for i32 {
+impl From<Interrupt> for u32 {
     fn from(val: Interrupt) -> Self {
-        val as i32
+        val as u32
     }
 }
 
-impl TryFrom<i32> for Interrupt {
-    type Error = ();
+impl TryFrom<u32> for Interrupt {
+    type Error = anyhow::Error;
 
-    fn try_from(val: i32) -> Result<Self, Self::Error> {
+    fn try_from(val: u32) -> Result<Self, Self::Error> {
         match val {
             1 => Ok(Interrupt::Timer),
             2 => Ok(Interrupt::Keyboard),
             3 => Ok(Interrupt::Mouse),
-            _ => Err(()),
+            _ => Err(anyhow!("{val} was not a valid interrupt type index!")),
         }
     }
 }
@@ -74,7 +77,7 @@ impl InterruptController {
             let memory = MEMORY
                 .get()
                 .expect("gui loop run before init function or memory was not yet initialized");
-            let iterrupt_function_addr = memory.read(B32(interrupt_function_pointer as i32));
+            let iterrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
 
             todo!();
             return Some(Instruction::Call(todo!()));
@@ -84,20 +87,27 @@ impl InterruptController {
 }
 pub struct Thread {
     pub interrupt_controller: InterruptController,
-
     pub pc: Counter,
     registers: RAM256,
     is_halting: AtomicBool,
+    stack_base_addr: B32,
 }
 impl Thread {
-    pub async fn run_loop(&self) {
+    pub async fn run_loop(&self) -> Result<()> {
         while !self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
-            debug!("pc-address: {}", self.pc.read());
+            info!("pc-address: {}", self.pc.read());
             let instruction = self.fetch_instruction();
-            debug!("fetch_instruction: {:?}", instruction);
-            self.run_instruction(instruction, true).await;
+            info!("fetch_instruction: {:?}", instruction);
+            if let Err(err) = self
+                .run_instruction(instruction, true)
+                .await
+                .context("encountered error while running instruction on thread")
+            {
+                handle_error(err);
+            }
             self.pc.increment(true);
         }
+        Ok(())
     }
 
     fn fetch_instruction(&self) -> Instruction {
@@ -134,11 +144,14 @@ pub async fn clock_cycle(thread: &Thread) {
 pub fn spawn_threads(thread_count: usize) {
     let mut threads = Vec::with_capacity(thread_count);
     for i in 0..thread_count {
-        threads.push(create_thread());
+        threads.push(create_thread(B32((30000 + 5000 * i) as u32)));
     }
     THREADS.get_or_init(|| threads);
 }
-pub fn create_thread() -> Thread {
+pub fn create_thread(stack_base_addr: B32) -> Thread {
+    let registers = RAM256::new();
+    registers.write(stack_base_addr, B8(255), true);
+    registers.write(stack_base_addr, B8(254), true);
     Thread {
         interrupt_controller: InterruptController {
             interrupts_enabled: AtomicBool::new(false),
@@ -148,8 +161,9 @@ pub fn create_thread() -> Thread {
                 base_addr: AtomicU32::new(0),
             },
         },
+        stack_base_addr,
         pc: (Counter::new()),
-        registers: (RAM256::new()),
+        registers,
         is_halting: (AtomicBool::new(false)),
     }
 }

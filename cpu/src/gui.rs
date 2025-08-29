@@ -5,7 +5,7 @@ use anyhow::{Result, format_err};
 use lazy_static::lazy_static;
 use log::*;
 
-pub fn init_app_gui() -> Result<()> {
+pub async fn init_app_gui() -> Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
@@ -13,8 +13,6 @@ pub fn init_app_gui() -> Result<()> {
     let mut app = MyApp {
         variables: VariableStore::new(),
     };
-    crate::init(&mut app)?;
-
     eframe::run_native(
         "My egui App",
         options,

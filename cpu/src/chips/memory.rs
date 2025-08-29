@@ -2,7 +2,7 @@ pub mod RAM;
 
 use std::{
     fs::write,
-    sync::atomic::{AtomicBool, AtomicI16, AtomicI32, AtomicU16},
+    sync::atomic::{AtomicBool, AtomicI16, AtomicI32, AtomicU16, AtomicU32},
 };
 
 use log::info;
@@ -34,19 +34,19 @@ use super::{
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 
 pub struct B32Register {
-    bit_memory: AtomicI32,
+    bit_memory: AtomicU32,
 }
 impl Clone for B32Register {
     fn clone(&self) -> Self {
         Self {
-            bit_memory: AtomicI32::new(self.bit_memory.load(ORDERING)),
+            bit_memory: AtomicU32::new(self.bit_memory.load(ORDERING)),
         }
     }
 }
 impl B32Register {
     pub fn new() -> Self {
         Self {
-            bit_memory: AtomicI32::new(0),
+            bit_memory: AtomicU32::new(0),
         }
     }
 

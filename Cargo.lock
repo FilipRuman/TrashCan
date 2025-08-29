@@ -273,6 +273,7 @@ dependencies = [
  "anyhow",
  "clap",
  "colog",
+ "cpu",
  "crossbeam-queue",
  "eframe",
  "lazy_static",
@@ -737,6 +738,16 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "colog",
+ "log",
+ "tokio",
 ]
 
 [[package]]
@@ -2937,6 +2948,7 @@ dependencies = [
  "anyhow",
  "assembler",
  "colog",
+ "compiler",
  "cpu",
  "log",
  "tokio",

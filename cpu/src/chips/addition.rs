@@ -91,7 +91,7 @@ impl B32 {
     #[inline(always)]
     #[cfg(feature = "fast")]
     pub fn sum(self, b: B32, carry: bool) -> (B32, bool) {
-        (B32(self.0 + b.0 + carry as i32), false) //info carry only happens on overflows and then this will panic anyway
+        (B32(self.0 + b.0 + carry as u32), false) //info carry only happens on overflows and then this will panic anyway
     }
     #[inline(always)]
     #[cfg(not(feature = "fast"))]

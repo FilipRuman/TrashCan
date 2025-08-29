@@ -1,5 +1,6 @@
+use anyhow::Result;
+use log::info;
 use std::time::Duration;
-
 use tokio::time::sleep;
 
 use crate::{
@@ -30,9 +31,10 @@ impl Thread {
         );
     }
 
-    pub fn Jmpc(&self, register_jump_target: B8, register_condition: B8, run: bool) {
+    pub fn Jmpc(&self, register_condition: B8, register_jump_target: B8, run: bool) {
         let condition = self.registers.read(register_condition).bit(0);
 
+        info!("Jmpc: {condition}, register {register_condition}");
         // store addr
         self.pc.write(
             true,
@@ -42,12 +44,18 @@ impl Thread {
             run & condition,
         );
     }
-    pub fn Init(&self, register_thread_index: B8, start_address_register: B8, run: bool) {
+    pub fn Init(
+        &self,
+        register_thread_index: B8,
+        start_address_register: B8,
+        run: bool,
+    ) -> Result<()> {
         let thread_index = self.registers.read(register_thread_index);
         let start_address = self.registers.read(start_address_register);
         let thread = &THREADS.get().unwrap()[thread_index.0 as usize];
         thread.pc.set(start_address, run);
-        thread.run_loop();
+        tokio::spawn(thread.run_loop());
+        Ok(())
     }
     pub fn Intr(&self, thread_index_register: B8, interrupt_type_index_register: B8, run: bool) {
         let thread_index = self.registers.read(thread_index_register);
@@ -68,9 +76,10 @@ impl Thread {
             .store(true, ORDERING);
         true;
     }
-    pub async fn Phrp(&self, index_register: B8, data_register: B8, run: bool) {
+    pub async fn Phrp(&self, index_register: B8, data_register: B8, run: bool) -> Result<()> {
         let peripheral_index = self.registers.read(index_register);
         let data = self.registers.read(data_register);
-        call_peripheral(peripheral_index, data).await;
+        call_peripheral(peripheral_index, data).await?;
+        Ok(())
     }
 }

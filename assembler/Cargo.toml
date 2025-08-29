@@ -7,6 +7,7 @@ edition = "2024"
 
 
 [dependencies]
+cpu = {path ="../cpu"}
 tokio = { version = "1.47.1", features = ["full"] }
 lazy_static = "1.5"
 eframe = {version ="0.32", features= [] }

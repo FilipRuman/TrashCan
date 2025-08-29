@@ -7,10 +7,10 @@ use std::{
 use super::bit::{d_mux, mux};
 
 #[derive(Clone, Copy, Debug)]
-pub struct B8(pub i8);
+pub struct B8(pub u8);
 impl Eq for B8 {}
-impl From<i8> for B8 {
-    fn from(value: i8) -> Self {
+impl From<u8> for B8 {
+    fn from(value: u8) -> Self {
         B8(value)
     }
 }
@@ -18,7 +18,7 @@ impl Shl for B8 {
     type Output = Self;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        self.shift_bits(-rhs.0 as i8)
+        self.shift_bits(rhs.0 as i8)
     }
 }
 impl Shr for B8 {
@@ -34,13 +34,13 @@ impl Display for B8 {
     }
 }
 
-impl From<B8> for i8 {
+impl From<B8> for u8 {
     fn from(value: B8) -> Self {
         value.0
     }
 }
-impl AsRef<i8> for B8 {
-    fn as_ref(&self) -> &i8 {
+impl AsRef<u8> for B8 {
+    fn as_ref(&self) -> &u8 {
         &self.0
     }
 }
@@ -136,7 +136,7 @@ impl B8 {
 
         let mut bits = [false; 8];
         for i in 0..8 {
-            bits[7 - i] = ((self >> B8(i as i8)) & B8(1)).0 == 1; // MSB at index 0
+            bits[7 - i] = ((self >> B8(i as u8)) & B8(1)).0 == 1; // MSB at index 0
         }
         bits
     }
@@ -179,6 +179,6 @@ impl B8 {
         B8(bits
             .iter()
             .enumerate()
-            .fold(0i8, |acc, (i, &bit)| acc | ((bit as i8) << i)))
+            .fold(0u8, |acc, (i, &bit)| acc | ((bit as u8) << i)))
     }
 }

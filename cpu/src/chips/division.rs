@@ -6,19 +6,19 @@ use super::b32::B32;
 /// Unsigned 32-bit division using the restoring (shift-subtract) algorithm.
 /// Returns None for division-by-zero, otherwise Some((quotient, remainder)).
 
-pub fn div_mod_restoring(dividend: i32, divisor: i32) -> (i32, i32) {
+pub fn div_mod_restoring(dividend: u32, divisor: u32) -> (u32, u32) {
     if divisor == 0 {
         panic!("tried dividing by 0!");
     }
 
     // rem holds 64 bits: upper 32 are the running remainder, lower 32 hold (and shift in) dividend bits.
     let mut reminder: i64 = dividend as i64;
-    let mut quotient: i32 = 0;
+    let mut quotient: u32 = 0;
 
     // Do 32 iterations: on each iteration shift left by 1, then try subtracting divisor from upper 32 bits.
     for _ in 0..32 {
         reminder <<= 1; // shift left; the next dividend bit (from lower half) moves into upper half
-        let upper = (reminder >> 32) as i32;
+        let upper = (reminder >> 32) as u32;
 
         if upper >= divisor {
             // subtract divisor from upper half and set the LSB of quotient to 1
@@ -32,7 +32,7 @@ pub fn div_mod_restoring(dividend: i32, divisor: i32) -> (i32, i32) {
         }
     }
 
-    let remainder = (reminder >> 32) as i32;
+    let remainder = (reminder >> 32) as u32;
     (quotient, remainder)
 }
 

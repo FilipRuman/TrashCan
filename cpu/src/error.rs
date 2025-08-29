@@ -6,7 +6,7 @@ pub fn handle_error(err: anyhow::Error) {
     // you might ask why, this is overkill.
     // I agree, but I don't care
     error!("{err:?}");
+    panic!()
 }
 
 use anyhow::{Context, Result as AnyhowResult};
-
