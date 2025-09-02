@@ -106,8 +106,8 @@ Sets the CPU's IDT pointer to the address in `x` and enables interrupts on this 
 ```
 00000110 xxxxxxxx yyyyyyyy ||||||||||||||||  
 ```
-- **x:** Register containing source address.  
-- **y:** Destination register.  
+- **x:** Destination register.  
+- **y:** Register containing source address.  
 
 **Operation:**  
 Reads value from memory at address in `x` into `y`.
@@ -132,8 +132,8 @@ Writes value from `y` to memory at address in `x`.
 ```
 00001000 xxxxxxxx yyyyyyyy ||||||||||||||||  
 ```
-- **x:** Source register.  
-- **y:** Destination register.  
+- **x:** Destination register.  
+- **y:** Source register.  
 
 **Operation:**  
 Copies value from `x` registry into `y` registry.
@@ -270,21 +270,9 @@ Generates a random 32-bit number in range `y` - `z` and stores it in `x`.
 
 ---
 
-## Stack Operations
-
-push 
-
-pop
-
-call 
-
-ret
-
----
-
 ## Special registers:
-RBP
-RSP
+255 -> Stack frame pointer
+254 -> Stack head pointer
 
 
 

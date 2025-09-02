@@ -3,7 +3,7 @@ use crate::{
     chips::{b8::B8, b32::B32, thread::Thread},
 };
 impl Thread {
-    pub fn Read(&self, source_address_register: B8, destination_register: B8, run: bool) {
+    pub fn Read(&self, destination_register: B8, source_address_register: B8, run: bool) {
         let data = MEMORY
             .get()
             .unwrap()
@@ -18,7 +18,7 @@ impl Thread {
             run,
         );
     }
-    pub fn Cp(&self, source_register: B8, destination_register: B8, run: bool) {
+    pub fn Cp(&self, destination_register: B8, source_register: B8, run: bool) {
         self.registers.write(
             self.registers.read(source_register),
             destination_register,
