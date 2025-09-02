@@ -30,6 +30,7 @@ pub enum Instruction {
     Write(B8, B8),
     Cp(B8, B8),
     Clr(B8),
+    Caddr(B8),
     Set(B8),
     Pgt(B8),
 
@@ -80,7 +81,6 @@ impl From<Instruction> for B8 {
             Instruction::Clr(_) => B8(9),
             Instruction::Set(_) => B8(10),
             Instruction::Pgt(_) => B8(11),
-
             Instruction::Add(_, _) => B8(12),
             Instruction::Sub(_, _) => B8(13),
             Instruction::Div(_, _) => B8(14),
@@ -88,29 +88,26 @@ impl From<Instruction> for B8 {
             Instruction::Mod(_, _) => B8(16),
             Instruction::Neg(_) => B8(17),
             Instruction::Abs(_) => B8(18),
-
             Instruction::And(_, _) => B8(19),
             Instruction::Or(_, _) => B8(20),
             Instruction::Xor(_, _) => B8(21),
             Instruction::Not(_) => B8(22),
             Instruction::Shr(_, _) => B8(23),
             Instruction::Shl(_, _) => B8(24),
-
             Instruction::Eq(_, _, _) => B8(25),
             Instruction::Gte(_, _, _) => B8(26),
             Instruction::Lte(_, _, _) => B8(27),
             Instruction::Lt(_, _, _) => B8(28),
             Instruction::Gt(_, _, _) => B8(29),
-
             Instruction::Halt() => B8(30),
             Instruction::Sleep(_) => B8(31),
             Instruction::Rng(_, _, _) => B8(32),
             Instruction::Syscall(_, _) => B8(33),
-
             Instruction::Push(_) => B8(34),
             Instruction::Pop(_) => B8(35),
             Instruction::Call(_) => B8(36),
             Instruction::Ret() => B8(37),
+            Instruction::Caddr(_) => B8(38),
         }
     }
 }
@@ -156,6 +153,8 @@ impl From<B32> for Instruction {
             35 => Self::Pop(value.byte(1)),
             36 => Self::Call(value.byte(1)),
             37 => Self::Ret(),
+
+            38 => Self::Caddr(value.byte(1)),
             index => {
                 panic!("conversion form B32 to instruction with index: {index} is not supported")
             }
@@ -464,6 +463,14 @@ impl From<Instruction> for B32 {
                 B8(0),        // fill
                 B8(0),        // fill
             ]),
+            Instruction::Caddr(out_register) => {
+                B32::from_bytes([
+                    value.into(), // command index
+                    out_register,
+                    B8(0), // fill
+                    B8(0), // fill
+                ])
+            }
         }
     }
 }
@@ -473,27 +480,27 @@ impl Thread {
         match instruction {
             Instruction::Jmp(register_jump_target) => self.Jmp(register_jump_target, run),
             Instruction::Jmpc(register_jump_target, register_condition) => {
-                self.Jmpc(register_jump_target, register_condition, run)
-            }
+                        self.Jmpc(register_jump_target, register_condition, run)
+                    }
             Instruction::Init(start_address_register, register_thread_index) => {
-                self.Init(start_address_register, register_thread_index, run)?
-            }
+                        self.Init(start_address_register, register_thread_index, run)?
+                    }
             Instruction::Intr(thread_index_register, interrupt_type_index_register) => {
-                self.Intr(thread_index_register, interrupt_type_index_register, run)
-            }
+                        self.Intr(thread_index_register, interrupt_type_index_register, run)
+                    }
             Instruction::Idt(address_register) => self.Idt(address_register, run),
             Instruction::Phrp(index_register, data_register) => {
-                self.Phrp(index_register, data_register, run).await?
-            }
+                        self.Phrp(index_register, data_register, run).await?
+                    }
             Instruction::Read(source_address_register, destination_register) => {
-                self.Read(source_address_register, destination_register, run)
-            }
+                        self.Read(source_address_register, destination_register, run)
+                    }
             Instruction::Write(destination_address_register, source_register) => {
-                self.Write(destination_address_register, source_register, run)
-            }
+                        self.Write(destination_address_register, source_register, run)
+                    }
             Instruction::Cp(source_register, destination_register) => {
-                self.Cp(source_register, destination_register, run)
-            }
+                        self.Cp(source_register, destination_register, run)
+                    }
             Instruction::Clr(register) => self.Clr(register, run),
             Instruction::Set(register) => self.Set(register, run),
             Instruction::Pgt(address_register) => self.Pgt(address_register, run),
@@ -511,32 +518,33 @@ impl Thread {
             Instruction::Shr(a_register, b_register) => self.Shr(a_register, b_register, run),
             Instruction::Shl(a_register, b_register) => self.Shl(a_register, b_register, run),
             Instruction::Eq(a_register, b_register, out_register) => {
-                self.Eq(a_register, b_register, out_register, run)
-            }
+                        self.Eq(a_register, b_register, out_register, run)
+                    }
             Instruction::Gte(a_register, b_register, out_register) => {
-                self.Gte(a_register, b_register, out_register, run)
-            }
+                        self.Gte(a_register, b_register, out_register, run)
+                    }
             Instruction::Lte(a_register, b_register, out_register) => {
-                self.Lte(a_register, b_register, out_register, run)
-            }
+                        self.Lte(a_register, b_register, out_register, run)
+                    }
             Instruction::Lt(a_register, b_register, out_register) => {
-                self.Lt(a_register, b_register, out_register, run)
-            }
+                        self.Lt(a_register, b_register, out_register, run)
+                    }
             Instruction::Gt(a_register, b_register, out_register) => {
-                self.Gt(a_register, b_register, out_register, run)
-            }
+                        self.Gt(a_register, b_register, out_register, run)
+                    }
             Instruction::Halt() => self.Halt(run),
             Instruction::Sleep(length_register) => self.Sleep(length_register, run).await,
             Instruction::Rng(out_register, min_register, max_register) => {
-                self.Rng(out_register, min_register, max_register, run)
-            }
+                        self.Rng(out_register, min_register, max_register, run)
+                    }
             Instruction::Syscall(system_call_index_register, argument_block_register) => {
-                self.Syscall(system_call_index_register, argument_block_register, run)
-            }
+                        self.Syscall(system_call_index_register, argument_block_register, run)
+                    }
             Instruction::Push(contents_register) => self.Push(contents_register, run),
             Instruction::Pop(output_register) => self.Pop(output_register, run),
             Instruction::Call(address_register) => self.Call(address_register, run),
             Instruction::Ret() => self.Ret(run),
+            Instruction::Caddr(output_register) => self.Caddr(output_register, run),
         }
         Ok(())
     }

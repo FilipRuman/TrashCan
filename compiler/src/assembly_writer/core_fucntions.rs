@@ -1,6 +1,6 @@
 use super::{
     AssemblyData, ExpressionOutput,
-    assembly_instructions::{phrp, set},
+    assembly_instructions::{self, phrp, set},
     handle_expr,
 };
 use crate::parser::expression::Expression;
@@ -25,9 +25,15 @@ pub fn print_raw(value: Expression, assembly_data: &mut AssemblyData) -> Result<
                     + &phrp(peripheral_registry, serial_out_data_registry));
         }
     }
-    assembly_data.mark_registries_free(&[peripheral_registry, serial_out_data_registry]);
+    assembly_data.mark_registers_free(&[peripheral_registry, serial_out_data_registry]);
     Ok(ExpressionOutput {
         code: output_code,
         data: Vec::new(),
+    })
+}
+pub fn halt_func() -> Result<ExpressionOutput> {
+    Ok(ExpressionOutput {
+        code: assembly_instructions::halt(),
+        data: vec![],
     })
 }

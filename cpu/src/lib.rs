@@ -25,6 +25,7 @@ use gui::MyApp;
 use log::*;
 use tokio::task;
 
+pub const SHOW_INSTRUCTION_FETCHING_DEBUG: bool = false;
 #[derive(clap::Parser)]
 struct Args {
     /// Number of threads to use

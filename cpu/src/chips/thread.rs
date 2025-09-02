@@ -13,7 +13,7 @@ use std::{
 };
 
 use crate::{
-    MEMORY,
+    MEMORY, SHOW_INSTRUCTION_FETCHING_DEBUG,
     chips::{
         b32::B32,
         memory::{Counter, RAM::ram256::RAM256},
@@ -95,9 +95,11 @@ pub struct Thread {
 impl Thread {
     pub async fn run_loop(&self) -> Result<()> {
         while !self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
-            info!("pc-address: {}", self.pc.read());
             let instruction = self.fetch_instruction();
-            info!("fetch_instruction: {:?}", instruction);
+            if SHOW_INSTRUCTION_FETCHING_DEBUG {
+                info!("pc-address: {}", self.pc.read());
+                info!("fetch_instruction: {:?}", instruction);
+            }
             if let Err(err) = self
                 .run_instruction(instruction, true)
                 .await

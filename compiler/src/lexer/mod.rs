@@ -41,7 +41,7 @@ pub struct Lexer {
     tokens: Vec<Token>,
     pub source: Vec<String>,
     pos: u16,
-    current_line: u16,
+    current_line: usize,
     black_list: Vec<TokenKind>,
 }
 impl Lexer {
@@ -59,7 +59,7 @@ impl Lexer {
             source,
             pos: 0,
             black_list,
-            current_line: 0,
+            current_line: 1,
         }
     }
     fn get_patterns() -> Vec<Pattern> {
@@ -313,6 +313,8 @@ pub fn reserved_symbols() -> HashMap<String, TokenKind> {
         ("for".to_string(), TokenKind::For),
         ("while".to_string(), TokenKind::While),
         ("return".to_string(), TokenKind::Return),
+        ("true".to_string(), TokenKind::True),
+        ("false".to_string(), TokenKind::False),
     ])
 }
 

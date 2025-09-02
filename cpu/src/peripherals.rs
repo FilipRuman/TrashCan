@@ -16,8 +16,8 @@ lazy_static! {
 
 pub async fn call_peripheral(peripheral_index: B32, data: B32) -> Result<()> {
     info!(
-        "call_peripheral {peripheral_index},data bits {:032b}",
-        data.0
+        "call_peripheral {peripheral_index},data {} bits {:032b}",
+        data.0, data.0
     );
 
     match peripheral_index.0 as u32 {
@@ -25,6 +25,33 @@ pub async fn call_peripheral(peripheral_index: B32, data: B32) -> Result<()> {
             SERIAL.lock().await.call_serial(data);
             Ok(())
         }
+        250 => {
+            // dummy
+            Ok(())
+        }
+
+        251 => {
+            // dummy
+            Ok(())
+        }
+
+        252 => {
+            // dummy
+            Ok(())
+        }
+        253 => {
+            // dummy
+            Ok(())
+        }
+        254 => {
+            // dummy
+            Ok(())
+        }
+        255 => {
+            // dummy
+            Ok(())
+        }
+
         index => Err(anyhow!("peripheral with index: {index} was not mapped!")),
     }
 }

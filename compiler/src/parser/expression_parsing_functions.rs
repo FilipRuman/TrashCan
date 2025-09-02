@@ -17,7 +17,7 @@ pub fn parse_indexing_array(parser: &mut Parser, _: &i8, left: Expression) -> Re
     Ok(Expression::IndexArray {
         left: Box::new(left.clone()),
         indexes,
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 
@@ -39,7 +39,7 @@ pub fn parse_else(parser: &mut Parser) -> Result<Expression> {
             Ok(Expression::Else {
                 condition: Some(Box::new(condition)),
                 inside,
-                debug_data: parser.get_current_debug_data(),
+                debug_data: parser.get_current_debug_data()?,
             })
         }
         _ => {
@@ -53,7 +53,7 @@ pub fn parse_else(parser: &mut Parser) -> Result<Expression> {
             Ok(Expression::Else {
                 condition: None,
                 inside,
-                debug_data: parser.get_current_debug_data(),
+                debug_data: parser.get_current_debug_data()?,
             })
         }
     }
@@ -75,7 +75,7 @@ pub fn parse_out(parser: &mut Parser) -> Result<Expression> {
     Ok(Expression::Out {
         var_type,
         var_name,
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_function_call(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
@@ -92,7 +92,7 @@ pub fn parse_function_call(parser: &mut Parser, _: &i8, left: Expression) -> Res
     Ok(Expression::FunctionCall {
         left: Box::new(left),
         values,
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_return(parser: &mut Parser) -> Result<Expression> {
@@ -102,7 +102,7 @@ pub fn parse_return(parser: &mut Parser) -> Result<Expression> {
     Ok(Expression::Return {
         value: Box::new(value),
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_for(parser: &mut Parser) -> Result<Expression> {
@@ -132,7 +132,7 @@ pub fn parse_for(parser: &mut Parser) -> Result<Expression> {
         iteration_target: Box::new(iteration_target),
         inside,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_if(parser: &mut Parser) -> Result<Expression> {
@@ -159,7 +159,7 @@ pub fn parse_if(parser: &mut Parser) -> Result<Expression> {
         condition: Box::new(condition),
         inside,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_while(parser: &mut Parser) -> Result<Expression> {
@@ -187,7 +187,7 @@ pub fn parse_while(parser: &mut Parser) -> Result<Expression> {
         condition: Box::new(condition),
         inside,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_range(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
@@ -199,7 +199,7 @@ pub fn parse_range(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expr
         to: Box::new(to),
         from: Box::new(left),
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
@@ -227,7 +227,7 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
 
             var_name: parser.expect(&TokenKind::Identifier)?.value.to_owned(),
 
-            debug_data: parser.get_current_debug_data(),
+            debug_data: parser.get_current_debug_data()?,
         });
         if parser.current_token_kind()? == &TokenKind::Comma {
             parser.advance()?;
@@ -235,13 +235,17 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
     }
 
     parser.expect(&TokenKind::CloseParen)?;
-    let output = if parser.current_token_kind()? == &TokenKind::Arrow {
+    let mut output = Vec::new();
+    if parser.current_token_kind()? == &TokenKind::Arrow {
         parser.expect(&TokenKind::Arrow)?;
-        Some(parse_type(parser, &0)?)
-    } else {
-        None
-    };
-
+        loop {
+            output.push(parse_type(parser, &0)?);
+            if parser.current_token_kind()? != &TokenKind::Comma {
+                break;
+            }
+            parser.expect(&TokenKind::Comma)?;
+        }
+    }
     parser.expect(&TokenKind::OpenCurly)?;
     let mut inside = Vec::new();
     while parser.current_token_kind()? != &TokenKind::CloseCurly {
@@ -262,7 +266,7 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
         output,
         inside,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 
@@ -326,7 +330,7 @@ pub fn parse_class(parser: &mut Parser) -> Result<Expression> {
                 var_name: property_name,
                 var_type: property_type,
 
-                debug_data: parser.get_current_debug_data(),
+                debug_data: parser.get_current_debug_data()?,
             });
             continue;
         }
@@ -341,7 +345,7 @@ pub fn parse_class(parser: &mut Parser) -> Result<Expression> {
         functions,
         properties,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
@@ -357,7 +361,7 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
 
     Ok(Expression::ArrayInitialization {
         properties,
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_class_instantiation(
@@ -385,7 +389,7 @@ pub fn parse_class_instantiation(
         name,
         properties,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
@@ -396,7 +400,7 @@ pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
     }
     let var_type = parse_type(parser, &0).with_context(|| {
         format!(
-            "parsing variable declaration {:?}",
+            "parsing type for variable declaration, errors most of the time show that type specification: doesn't  exist / is invalid {:?} ",
             parser.get_current_debug_data()
         )
     })?;
@@ -415,7 +419,7 @@ pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
         name,
         mutable,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_assignment(parser: &mut Parser, _: &i8, target: Expression) -> Result<Expression> {
@@ -432,7 +436,7 @@ pub fn parse_assignment(parser: &mut Parser, _: &i8, target: Expression) -> Resu
         target: Box::new(target),
         operator,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
         value: Box::new(value),
     })
 }
@@ -454,7 +458,7 @@ pub fn parse_binary_expr(parser: &mut Parser, bp: &i8, left: Expression) -> Resu
         operator,
         right: Box::new(right),
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
 }
 pub fn parse_member_expr(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
@@ -464,7 +468,7 @@ pub fn parse_member_expr(parser: &mut Parser, _: &i8, left: Expression) -> Resul
     Ok(Expression::MemberExpr {
         member: Box::new(left),
         name,
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
     .context("member expr")
 }
@@ -479,9 +483,18 @@ pub fn parse_grouping(parser: &mut Parser) -> Result<Expression> {
 
     Ok(Expression::Grouping(
         Box::new(expression_inside),
-        parser.get_current_debug_data(),
+        parser.get_current_debug_data()?,
     ))
     .context("grouping nod")
+}
+pub fn parse_bool_nod(parser: &mut Parser) -> Result<Expression> {
+    Ok(match parser.advance()?.kind {
+        TokenKind::True => Expression::Boolean(true, parser.get_current_debug_data()?),
+        TokenKind::False => Expression::Boolean(false, parser.get_current_debug_data()?),
+        other => {
+            bail!("parse_bool_nod -> other- '{other:?}'. this should never happen!");
+        }
+    })
 }
 pub fn parse_number_nod(parser: &mut Parser) -> Result<Expression> {
     let value = &parser.advance()?.value.clone();
@@ -492,7 +505,7 @@ pub fn parse_number_nod(parser: &mut Parser) -> Result<Expression> {
                 parser.get_current_debug_data()
             )
         })?,
-        parser.get_current_debug_data(),
+        parser.get_current_debug_data()?,
     ))
     .context("number nod")
 }
@@ -518,7 +531,7 @@ pub fn parse_prefix_nod(parser: &mut Parser) -> Result<Expression> {
         prefix,
         value,
 
-        debug_data: parser.get_current_debug_data(),
+        debug_data: parser.get_current_debug_data()?,
     })
     .context("prefix nod")
 }
@@ -526,7 +539,7 @@ pub fn parse_prefix_nod(parser: &mut Parser) -> Result<Expression> {
 pub fn parse_identifier_nod(parser: &mut Parser) -> Result<Expression> {
     Ok(Expression::Identifier(
         parser.advance()?.value.to_string(),
-        parser.get_current_debug_data(),
+        parser.get_current_debug_data()?,
     ))
     .context("identifier nod")
 }
@@ -536,7 +549,7 @@ pub fn parse_keyword_nod(parser: &mut Parser) -> Result<Expression> {
 pub fn parse_string_nod(parser: &mut Parser) -> Result<Expression> {
     Ok(Expression::String(
         parser.advance()?.value.to_string(),
-        parser.get_current_debug_data(),
+        parser.get_current_debug_data()?,
     ))
     .context("string nod")
 }

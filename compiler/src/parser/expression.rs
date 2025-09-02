@@ -17,6 +17,7 @@ pub struct DebugData {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    Boolean(bool, DebugData),
     Number(u32, DebugData),
     String(String, DebugData),
     Identifier(String, DebugData),
@@ -85,7 +86,7 @@ pub enum Expression {
         name: String,
         properties: Vec<Expression>,
         public: bool,
-        output: Option<Type>,
+        output: Vec<Type>,
         inside: Vec<Expression>,
 
         debug_data: DebugData,
@@ -164,6 +165,7 @@ impl Expression {
     pub fn debug_data(&self) -> &DebugData {
         match self {
             Expression::Number(_, debug_data) => debug_data,
+            Self::Boolean(_, debug_data) => debug_data,
             Expression::String(_, debug_data) => debug_data,
             Expression::Identifier(_, debug_data) => debug_data,
             Expression::Prefix {

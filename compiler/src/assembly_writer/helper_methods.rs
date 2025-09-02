@@ -2,15 +2,21 @@ use anyhow::*;
 
 use crate::parser::expression::DebugData;
 
-use super::{Data, Function, assembly_instructions::*};
+use super::{Data, Function, assembly_instructions::*, data_structures::AssemblyData};
 
-pub const STACK_BASE_POINTER: u8 = 254;
+pub const STACK_HEAD_POINTER: u8 = 254;
 pub const STACK_FRAME_POINTER: u8 = 255;
 pub fn write_data_to_stack(stack_offset_register: u8, input_register: u8) -> String {
     add(stack_offset_register, STACK_FRAME_POINTER) + &write(stack_offset_register, input_register)
 }
 pub fn read_data_off_stack(stack_offset_register: u8, output_register: u8) -> String {
     add(stack_offset_register, STACK_FRAME_POINTER) + &read(output_register, stack_offset_register)
+}
+pub fn change_stack_frame_pointer(offset: u32, assembly_data: &mut AssemblyData) -> Result<String> {
+    let offset_register = assembly_data.get_free_register()?;
+    let code = set(offset_register, offset) + &add(STACK_FRAME_POINTER, offset_register);
+    assembly_data.mark_registers_free(&[offset_register]);
+    Ok(code)
 }
 pub fn validate_data_input_for_function(
     inputs: Vec<Data>,
@@ -39,6 +45,7 @@ pub fn validate_data_input_for_function(
 
     Ok(())
 }
+//
 // pub fn while_loop(condition_code: String, condition_registry: u8, contents: String) -> String {
 //     set(condition_registry, 1) + jmpc(address_registry, condition_registry)
 // }

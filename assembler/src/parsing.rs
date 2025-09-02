@@ -84,6 +84,7 @@ fn parse_instruction(
                 "Write" => parse_instruction_2(&tokens, line_nr, Instruction::Write).context("Write"),
                 "Cp" => parse_instruction_2(&tokens, line_nr, Instruction::Cp).context("Cp"),
                 "Clr" => parse_instruction_1(&tokens, line_nr, Instruction::Clr).context("Clr"),
+                "Caddr" => parse_instruction_1(&tokens, line_nr, Instruction::Caddr).context("Caddr"),
                 "Set" => {
                     // set takes 2 lines because the second one is value
                     *current_line_address += 1;

@@ -1,3 +1,5 @@
+use log::info;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     Tab,
@@ -34,6 +36,8 @@ pub enum TokenKind {
     PlusPlus,
     MinusMinus,
 
+    False,
+    True,
     Return,
     Plus,
     Minus,
@@ -72,10 +76,10 @@ pub enum TokenKind {
 pub struct Token {
     pub kind: TokenKind,
     pub value: String,
-    pub line: u16,
+    pub line: usize,
 }
 impl Token {
     pub fn debug(&self, index: u32) {
-        println!("{}.    {:?} {}", index, self.kind, self.value);
+        info!("{}.    {:?} {}", index, self.kind, self.value);
     }
 }

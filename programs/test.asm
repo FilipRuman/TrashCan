@@ -1,62 +1,80 @@
-Set r252 , 64
-Set r251 , 1
-Add r251 , r255
-Write r251 , r252
-Set r251 , 1
-Add r251 , r255
-Read r251 , r253
-Set r251 , 0
-Add r251 , r255
-Write r251 , r253
-Set r251 , 1
-Add r251 , r255
-Read r251 , r253
-Set r251 , 2
-Add r251 , r255
-Write r251 , r253
-
-Set r251 , 86
-Set r250 , 4
-Add r250 , r255
-Write r250 , r251
-Set r250 , 4
-Add r250 , r255
-Read r250 , r253
-Set r250 , 3
-Add r250 , r255
-Write r250 , r253
-Set r250 , 4
-Add r250 , r255
-Read r250 , r253
-Set r250 , 5
-Add r250 , r255
-Write r250 , r253
-
-Set r248 , 5
-Add r248 , r255
-Read r248 , r250
-Set r248 , 2
-Add r248 , r255
-Read r248 , r249
-Gt r250 , r249 , r253 
-Set r248 , 6
-Add r248 , r255
-Write r248 , r253
-Set r249 , 6
+// assignment 
+Set r253 , 1
+Add r254 , r253
+// variable declaration: out_val 
+// variable declaration end 
+Set r251 , 169953608
+Set r250 , 1
+Add r254 , r250
+Set r249 , 1
 Add r249 , r255
-Read r249 , r253
-Not r253 
-Set r249 , :if0
-Jmpc r253 , r249
-Set r250 , 0
-Set r247 , 169953608
-Set r246 , 7
+Write r249 , r251
+// call_function_code 
+Set r248 , 2
+Add r254 , r248
+Set r245 , 0
+Set r246 , 1
+Add r246 , r245
 Add r246 , r255
-Write r246 , r247
-Set r246 , 7
-Add r246 , r255
-Read r246 , r248
-Phrp r250 , r248
+Read r246 , r246
+Set r247 , 4294967295
+Add r247 , r254
+Write r247 , r246
+Set r246 , :function-return0
+Write r254 , r246
+Set r247 , :function_print_0
+Jmp r247
+:function-return0 
+// function call output: [FunctionInputData { name: "print", data_type: U32, stack_frame_offset: -2 }] 
+// function call converted output data : [Data { stack_frame_offset: 2, size: 1, data_type: U32 }] 
+// assignment data: Data { stack_frame_offset: 2, size: 1, data_type: U32 } 
+Set r245 , 2
+Add r245 , r255
+Read r245 , r252
+Set r245 , 0
+Add r245 , r255
+Write r245 , r252
+Set r245 , 2
+Add r245 , r255
+Read r245 , r252
+Set r245 , 0
+Add r245 , r255
+Write r245 , r252
+// end assignment 
 
-:if0 
+Set r252 , 0
+Set r246 , 0
+Add r246 , r255
+Read r246 , r245
+Phrp r252 , r245 
+
+Halt 
+:function_print_0 
+Cp r255 , r245
+Cp r254 , r255
+Set r246 , 0
+Set r249 , 4294967295
+Add r249 , r255
+Read r249 , r247
+Phrp r246 , r247 
+
+// Return 
+Set r247 , 25
+Set r246 , 1
+Add r254 , r246
+Set r249 , 1
+Add r249 , r255
+Write r249 , r247
+Set r244 , 4294967294
+Set r243 , 1
+Add r243 , r255
+Read r243 , r249
+Add r244 , r255
+Write r244 , r249
+Cp r255 , r252
+Cp r255 , r254
+Cp r245 , r255
+Read r252 , r252
+Jmp r252
+
 Halt 

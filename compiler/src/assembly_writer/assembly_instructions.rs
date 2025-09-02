@@ -1,6 +1,9 @@
 use std::fmt::format;
 
 use super::AssemblyData;
+pub fn comment(text: &str) -> String {
+    format!("// {text} \n")
+}
 
 /// Copies value from `x` registry into `y` registry.
 pub fn cp(destination_registry: u8, source_registry: u8) -> String {
@@ -99,13 +102,13 @@ pub fn gt(a_registry: u8, b_registry: u8, out_registry: u8) -> String {
 pub fn eq(a_registry: u8, b_registry: u8, out_registry: u8) -> String {
     format!("Eq r{a_registry} , r{b_registry} , r{out_registry} \n")
 }
+pub fn caddr(out_registry: u8) -> String {
+    format!("Caddr r{out_registry} \n")
+}
 
 pub fn phrp(peripheral_index_registry: u8, data_registry: u8) -> String {
-    format!("Phrp r{peripheral_index_registry} , r{data_registry}\n")
+    format!("Phrp r{peripheral_index_registry} , r{data_registry} \n")
 }
 pub fn halt() -> String {
     "Halt \n".to_string()
-}
-pub fn call_with_function_name(name: String) -> String {
-    format!("Call @{name}\n")
 }

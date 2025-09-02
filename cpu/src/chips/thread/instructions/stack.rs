@@ -1,16 +1,20 @@
 use crate::chips::{b8::B8, thread::Thread};
 impl Thread {
-    pub fn Push(&self, contents_register: B8,run:bool) {
+    pub fn Push(&self, contents_register: B8, run: bool) {
         todo!();
     }
-    pub fn Pop(&self, output_register: B8,run:bool) {
+    pub fn Pop(&self, output_register: B8, run: bool) {
         todo!();
     }
 
-    pub fn Call(&self, address_register: B8,run:bool) {
+    pub fn Call(&self, address_register: B8, run: bool) {
+        // self.stack_base_addr
+        todo!()
+    }
+    pub fn Ret(&self, run: bool) {
         todo!();
     }
-    pub fn Ret(&self,run:bool) {
-        todo!();
+    pub fn Caddr(&self, output_register: B8, run: bool) {
+        self.registers.write(self.pc.read(), output_register, run);
     }
 }
