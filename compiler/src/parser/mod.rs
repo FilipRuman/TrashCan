@@ -56,6 +56,12 @@ impl Parser {
     pub fn current_token_kind(&self) -> Result<&TokenKind> {
         Ok(&self.get_token(self.index)?.kind)
     }
+    pub fn current_bp_type(&self) -> Result<i8> {
+        Ok(match self.type_lookup.get_bp(self.current_token_kind()?) {
+            Ok(bp) => *bp,
+            Err(_) => -1,
+        })
+    }
     pub fn current_bp(&self) -> Result<&i8> {
         self.lookup.get_bp(self.current_token_kind()?)
     }

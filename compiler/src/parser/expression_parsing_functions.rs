@@ -217,15 +217,17 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
 
     let mut properties = Vec::new();
     while parser.current_token_kind()? != &TokenKind::CloseParen {
+        let var_name = parser.expect(&TokenKind::Identifier)?.value.to_owned();
+        parser.expect(&TokenKind::Colon)?;
+        let var_type = parse_type(parser, &0).with_context(|| {
+            format!(
+                "parsing property types inside function: {:?}",
+                parser.get_current_debug_data()
+            )
+        })?;
         properties.push(Expression::FunctionProperty {
-            var_type: parse_type(parser, &0).with_context(|| {
-                format!(
-                    "parsing property types inside function: {:?}",
-                    parser.get_current_debug_data()
-                )
-            })?,
-
-            var_name: parser.expect(&TokenKind::Identifier)?.value.to_owned(),
+            var_name,
+            var_type,
 
             debug_data: parser.get_current_debug_data()?,
         });
@@ -393,19 +395,21 @@ pub fn parse_class_instantiation(
     })
 }
 pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
-    parser.advance()?;
+    parser.expect(&TokenKind::Let)?;
     let mutable = parser.current_token_kind()? == &TokenKind::Mut;
     if mutable {
         parser.advance()?;
     }
+
+    let name = (parser.expect(&TokenKind::Identifier)?.value).to_owned();
+    parser.expect(&TokenKind::Colon)?;
+
     let var_type = parse_type(parser, &0).with_context(|| {
         format!(
             "parsing type for variable declaration, errors most of the time show that type specification: doesn't  exist / is invalid {:?} ",
             parser.get_current_debug_data()
         )
     })?;
-
-    let name = (&parser.expect(&TokenKind::Identifier)?.value).to_owned();
 
     debug_expression(&format!(
         "variable_declaration_expression: type{:?} mut:{} name:{} next_token_kind:{:?}",

@@ -36,10 +36,12 @@ pub fn parse_array_type(parser: &mut Parser, bp: &i8, left: Type) -> Result<Type
 }
 pub fn parse_type(parser: &mut Parser, bp: &i8) -> Result<Type> {
     let nod = parser.current_token()?;
+    info!("parse_type - current_token = {nod:?} - bp {bp:?}");
     let mut left = parser.type_lookup.get_nod(nod.kind)?(parser)?;
 
-    while parser.current_bp()? > bp {
-        let led = parser.current_token()?.kind.clone();
+    while parser.current_bp_type()? > *bp {
+        info!("inside");
+        let led = parser.current_token()?.kind;
         let led_fn = parser.type_lookup.get_led(led)?;
 
         left = led_fn(parser, &parser.current_bp()?.to_owned(), left)?;
