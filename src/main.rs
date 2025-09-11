@@ -6,7 +6,7 @@ pub async fn main() -> Result<()> {
     colog::init();
     trace!("init log");
 
-    if let Err(err) = compiler::compile("./programs/test.tl", "./programs/test.asm")
+    if let Err(err) = compiler::compile("./programs/test.tip", "./programs/test.asm")
         .await
         .context("compiler encountered error:")
     {

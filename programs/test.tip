@@ -1,0 +1,10 @@
+let type : NewType = NewType[a = 32];
+
+
+
+halt();
+
+struct NewType{
+a : u32,
+}
+

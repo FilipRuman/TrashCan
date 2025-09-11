@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::{lexer::tokens::TokenKind, parser::Parser};
 
-use super::types::{Type, parse_array_type, parse_symbol_type};
+use super::types::{Type, parse_array_type, parse_reference_type, parse_symbol_type};
 
 pub struct TypeLookup {
     pub binding_power_lu: HashMap<TokenKind, i8>,
@@ -55,7 +55,8 @@ impl TypeLookup {
         };
 
         lookup.led(TokenKind::OpenBracket, 5, parse_array_type);
-        lookup.nod(TokenKind::Identifier, 0, parse_symbol_type);
+        lookup.nod(TokenKind::Identifier, 1, parse_symbol_type);
+        lookup.nod(TokenKind::Reference, 0, parse_reference_type);
 
         lookup
     }

@@ -83,6 +83,7 @@ impl Lexer {
             Pattern::new(TokenKind::GreaterEquals, ">="),
             Pattern::new(TokenKind::Greater, ">"),
             Pattern::new(TokenKind::Or, "||"),
+            Pattern::new(TokenKind::Reference, "&"),
             Pattern::new(TokenKind::And, "&&"),
             Pattern::new(TokenKind::DotDot, ".."),
             Pattern::new(TokenKind::Dot, "."),
@@ -171,8 +172,8 @@ pub fn tokenize(source: String, black_list: Vec<TokenKind>) -> Result<Vec<Token>
 
         if !matched {
             bail!(
-                "Lexer Error -> unrecognized token near {:?}",
-                lexer.reminder()
+                "Lexer Error -> unrecognized token: {:?}",
+                lexer.reminder().iter().next()
             );
         }
     }
@@ -296,11 +297,10 @@ fn handle_standard_pattern_tokenization(
 pub fn reserved_symbols() -> HashMap<String, TokenKind> {
     HashMap::from([
         ("mut".to_string(), TokenKind::Mut),
-        ("out".to_string(), TokenKind::Out),
         ("let".to_string(), TokenKind::Let),
         ("const".to_string(), TokenKind::Const),
         ("enum".to_string(), TokenKind::Enum),
-        ("class".to_string(), TokenKind::Class),
+        ("struct".to_string(), TokenKind::Struct),
         ("pub".to_string(), TokenKind::Pub),
         ("mod".to_string(), TokenKind::Mod),
         ("new".to_string(), TokenKind::New),
@@ -351,8 +351,8 @@ fn handle_number_tokenization(lexer: &mut Lexer) {
         line: lexer.current_line,
     });
 }
-const NUMBER_BREAKERS: [&str; 15] = [
-    "\n", ";", " ", "\t", ")", "(", "+", "/", "-", "*", "%", ">", "<", "]", "[",
+const NUMBER_BREAKERS: [&str; 16] = [
+    "\n", ";", " ", ",", "\t", ")", "(", "+", "/", "-", "*", "%", ">", "<", "]", "[",
 ];
 const NUMBERS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 fn is_number(char: &str) -> bool {

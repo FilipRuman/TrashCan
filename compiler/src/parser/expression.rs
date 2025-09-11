@@ -17,6 +17,7 @@ pub struct DebugData {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    Reference(Box<Expression>, DebugData),
     Boolean(bool, DebugData),
     Number(u32, DebugData),
     String(String, DebugData),
@@ -44,7 +45,7 @@ pub enum Expression {
         debug_data: DebugData,
     },
     Grouping(Box<Expression>, DebugData),
-    Class {
+    Struct {
         public: bool,
         name: String,
         properties: Vec<Expression>,
@@ -52,13 +53,13 @@ pub enum Expression {
 
         debug_data: DebugData,
     },
-    ClassProperty {
+    StructProperty {
         var_name: String,
         var_type: Type,
 
         debug_data: DebugData,
     },
-    ClassFunction {
+    StructFunction {
         name: String, /* ,type : Type */
 
         debug_data: DebugData,
@@ -86,7 +87,7 @@ pub enum Expression {
         name: String,
         properties: Vec<Expression>,
         public: bool,
-        output: Vec<Type>,
+        output: Option<Type>,
         inside: Vec<Expression>,
 
         debug_data: DebugData,
@@ -187,19 +188,19 @@ impl Expression {
                 debug_data,
             } => debug_data,
             Expression::Grouping(expression, debug_data) => debug_data,
-            Expression::Class {
+            Expression::Struct {
                 public,
                 name,
                 properties,
                 functions,
                 debug_data,
             } => debug_data,
-            Expression::ClassProperty {
+            Expression::StructProperty {
                 var_name,
                 var_type,
                 debug_data,
             } => debug_data,
-            Expression::ClassFunction { name, debug_data } => debug_data,
+            Expression::StructFunction { name, debug_data } => debug_data,
             Expression::Binary {
                 left,
                 operator,
@@ -276,6 +277,8 @@ impl Expression {
                 debug_data,
             } => debug_data,
             Expression::PrintRaw { value, debug_data } => debug_data,
+            Expression::Reference(expression, debug_data) => debug_data,
+            Expression::Boolean(_, debug_data) => todo!(),
         }
     }
 }

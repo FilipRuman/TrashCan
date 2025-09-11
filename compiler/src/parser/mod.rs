@@ -63,7 +63,8 @@ impl Parser {
         })
     }
     pub fn current_bp(&self) -> Result<&i8> {
-        self.lookup.get_bp(self.current_token_kind()?)
+        self.lookup
+            .get_bp(self.current_token_kind()?, self.get_current_debug_data()?)
     }
 
     pub fn expect(&mut self, expected: &TokenKind) -> Result<&Token> {

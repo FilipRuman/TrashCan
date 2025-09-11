@@ -5,14 +5,15 @@ use anyhow::{Context, Result};
 
 use super::{
     Parser,
-    expression::Expression,
+    expression::{DebugData, Expression},
     expression_parsing_functions::{
         parse_array_initialization, parse_assignment, parse_binary_expr, parse_bool_nod,
-        parse_class, parse_class_instantiation, parse_else, parse_for, parse_function,
-        parse_function_call, parse_grouping, parse_identifier_nod, parse_if, parse_indexing_array,
-        parse_keyword_nod, parse_member_expr, parse_number_nod, parse_out, parse_prefix_nod,
-        parse_range, parse_return, parse_string_nod, parse_variable_declaration, parse_while,
+        parse_class_instantiation, parse_else, parse_for, parse_function, parse_function_call,
+        parse_grouping, parse_identifier_nod, parse_if, parse_indexing_array, parse_keyword_nod,
+        parse_member_expr, parse_number_nod, parse_prefix_nod, parse_range, parse_reference,
+        parse_return, parse_string_nod, parse_struct, parse_variable_declaration, parse_while,
     },
+    types::parse_reference_type,
 };
 
 type LedFunctionType = fn(&mut Parser, &i8, Expression) -> Result<Expression>;
@@ -24,20 +25,28 @@ pub struct Lookup {
     pub nod_lu: HashMap<TokenKind, fn(&mut Parser) -> Result<Expression>>,
 }
 impl Lookup {
-    pub fn get_led(&self, token_kind: TokenKind) -> Result<&LedFunctionType> {
-        self.led_lu
-            .get(&token_kind)
-            .with_context(|| format!("led was not found for token kind: {token_kind:?}"))
+    pub fn get_led(
+        &self,
+        token_kind: TokenKind,
+        debug_data: DebugData,
+    ) -> Result<&LedFunctionType> {
+        self.led_lu.get(&token_kind).with_context(|| {
+            format!("led was not found for token kind: {token_kind:?}, {debug_data:?}")
+        })
     }
-    pub fn get_nod(&self, token_kind: TokenKind) -> Result<&fn(&mut Parser) -> Result<Expression>> {
-        self.nod_lu
-            .get(&token_kind)
-            .with_context(|| format!("nod was not found for token kind: {token_kind:?}",))
+    pub fn get_nod(
+        &self,
+        token_kind: TokenKind,
+        debug_data: DebugData,
+    ) -> Result<&fn(&mut Parser) -> Result<Expression>> {
+        self.nod_lu.get(&token_kind).with_context(|| {
+            format!("nod was not found for token kind: {token_kind:?}, {debug_data:?}",)
+        })
     }
-    pub fn get_bp(&self, token_kind: &TokenKind) -> Result<&i8> {
-        self.binding_power_lu
-            .get(token_kind)
-            .with_context(|| format!("bp was not found for token kind: {token_kind:?}"))
+    pub fn get_bp(&self, token_kind: &TokenKind, debug_data: DebugData) -> Result<&i8> {
+        self.binding_power_lu.get(token_kind).with_context(|| {
+            format!("bp was not found for token kind: {token_kind:?}, {debug_data:?}")
+        })
     }
     fn led(
         &mut self,
@@ -109,9 +118,8 @@ impl Lookup {
         lookup.nod(TokenKind::While, 0, parse_while);
         lookup.nod(TokenKind::For, 0, parse_for);
 
-        lookup.nod(TokenKind::Out, 0, parse_out);
         lookup.nod(TokenKind::Let, 0, parse_variable_declaration);
-        lookup.nod(TokenKind::Class, 0, parse_class);
+        lookup.nod(TokenKind::Struct, 0, parse_struct);
 
         lookup.nod(TokenKind::String, 0, parse_string_nod);
         lookup.nod(TokenKind::Identifier, 0, parse_identifier_nod);
@@ -120,6 +128,7 @@ impl Lookup {
         lookup.nod(TokenKind::True, 0, parse_bool_nod);
         lookup.nod(TokenKind::False, 0, parse_bool_nod);
 
+        lookup.nod(TokenKind::Reference, 0, parse_reference);
         // -99 so I don't add new bp in lookup and override old one
         lookup.nod(TokenKind::Minus, -99, parse_prefix_nod);
         lookup.nod(TokenKind::Plus, -99, parse_prefix_nod);

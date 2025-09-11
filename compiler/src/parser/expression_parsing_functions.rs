@@ -1,7 +1,7 @@
 use crate::lexer::tokens::TokenKind;
 use anyhow::*;
 
-use super::{Parser, expression::*, types::parse_type};
+use super::{Parser, expression::*, parse, types::parse_type};
 
 pub fn parse_indexing_array(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::OpenBracket)?;
@@ -59,25 +59,6 @@ pub fn parse_else(parser: &mut Parser) -> Result<Expression> {
     }
 }
 
-pub fn parse_out(parser: &mut Parser) -> Result<Expression> {
-    // out i32 name;
-
-    // move past out
-    parser.advance()?;
-    let var_type = if parser.current_token_kind()? == &TokenKind::Identifier {
-        let output = Some(parse_type(parser, &0)?);
-        output
-    } else {
-        None
-    };
-
-    let var_name = (&parser.expect(&TokenKind::Identifier)?.value).to_owned();
-    Ok(Expression::Out {
-        var_type,
-        var_name,
-        debug_data: parser.get_current_debug_data()?,
-    })
-}
 pub fn parse_function_call(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::OpenParen)?;
     let mut values = Vec::new();
@@ -237,17 +218,12 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
     }
 
     parser.expect(&TokenKind::CloseParen)?;
-    let mut output = Vec::new();
-    if parser.current_token_kind()? == &TokenKind::Arrow {
+    let output = if parser.current_token_kind()? == &TokenKind::Arrow {
         parser.expect(&TokenKind::Arrow)?;
-        loop {
-            output.push(parse_type(parser, &0)?);
-            if parser.current_token_kind()? != &TokenKind::Comma {
-                break;
-            }
-            parser.expect(&TokenKind::Comma)?;
-        }
-    }
+        Some(parse_type(parser, &0)?)
+    } else {
+        None
+    };
     parser.expect(&TokenKind::OpenCurly)?;
     let mut inside = Vec::new();
     while parser.current_token_kind()? != &TokenKind::CloseCurly {
@@ -276,7 +252,7 @@ pub fn parse_expr(parser: &mut Parser, bp: &i8) -> Result<Expression> {
     let nod = parser.current_token().context("parse_expr -> nod")?;
     let mut left = parser
         .lookup
-        .get_nod(nod.kind)
+        .get_nod(nod.kind, parser.get_current_debug_data()?)
         .context("parse_expr -> left")?(parser)
     .context("parse_expr -> left function")?;
 
@@ -288,7 +264,7 @@ pub fn parse_expr(parser: &mut Parser, bp: &i8) -> Result<Expression> {
             .clone();
         let led_fn = parser
             .lookup
-            .get_led(led)
+            .get_led(led, parser.get_current_debug_data()?)
             .context("parse_expr -> led function")?;
 
         left = led_fn(parser, &parser.current_bp()?.to_owned(), left).with_context(|| {
@@ -300,12 +276,12 @@ pub fn parse_expr(parser: &mut Parser, bp: &i8) -> Result<Expression> {
     }
     Ok(left)
 }
-pub fn parse_class(parser: &mut Parser) -> Result<Expression> {
+pub fn parse_struct(parser: &mut Parser) -> Result<Expression> {
     // class pub NAME {
     // i32 name ;
     // bool[] orher_name;
     // }
-    parser.expect(&TokenKind::Class)?;
+    parser.expect(&TokenKind::Struct)?;
     let public = parser.current_token_kind()? == &TokenKind::Pub;
     if public {
         parser.expect(&TokenKind::Pub)?;
@@ -318,17 +294,20 @@ pub fn parse_class(parser: &mut Parser) -> Result<Expression> {
     while parser.current_token_kind()? != &TokenKind::EndOfFile
         && parser.current_token_kind()? != &TokenKind::CloseCurly
     {
+        //
+        let token_kind = parser.current_token_kind()?;
         // Property
-        if parser.current_token_kind()? == &TokenKind::Identifier {
+        if token_kind == &TokenKind::Identifier {
+            let property_name = parser.expect(&TokenKind::Identifier)?.value.clone();
+            parser.expect(&TokenKind::Colon)?;
             let property_type = parse_type(parser, &0).with_context(|| {
                 format!(
                     "parsing property of a class with name:{name} {:?}",
                     parser.get_current_debug_data()
                 )
             })?;
-            let property_name = parser.expect(&TokenKind::Identifier)?.value.clone();
-            parser.expect(&TokenKind::SemiColon)?;
-            properties.push(Expression::ClassProperty {
+            parser.expect(&TokenKind::Comma)?;
+            properties.push(Expression::StructProperty {
                 var_name: property_name,
                 var_type: property_type,
 
@@ -336,12 +315,13 @@ pub fn parse_class(parser: &mut Parser) -> Result<Expression> {
             });
             continue;
         }
-        // function
-        todo!()
+        if token_kind == &TokenKind::Fn {
+            parse_function(parser)?;
+        }
     }
     parser.expect(&TokenKind::CloseCurly)?;
 
-    Ok(Expression::Class {
+    Ok(Expression::Struct {
         public,
         name,
         functions,
@@ -357,6 +337,7 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         && parser.current_token_kind()? != &TokenKind::CloseCurly
     {
         properties.push(parse_expr(parser, &0)?);
+        parser.expect(&TokenKind::Comma)?;
     }
 
     parser.expect(&TokenKind::CloseCurly)?;
@@ -396,6 +377,7 @@ pub fn parse_class_instantiation(
 }
 pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
     parser.expect(&TokenKind::Let)?;
+
     let mutable = parser.current_token_kind()? == &TokenKind::Mut;
     if mutable {
         parser.advance()?;
@@ -422,7 +404,6 @@ pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
         var_type,
         name,
         mutable,
-
         debug_data: parser.get_current_debug_data()?,
     })
 }
@@ -455,7 +436,7 @@ pub fn parse_binary_expr(parser: &mut Parser, bp: &i8, left: Expression) -> Resu
         parser.current_token_kind()
     ));
 
-    let right = parse_expr(parser, &bp)?;
+    let right = parse_expr(parser, bp)?;
 
     Ok(Expression::Binary {
         left: Box::new(left),
@@ -483,13 +464,18 @@ pub fn parse_grouping(parser: &mut Parser) -> Result<Expression> {
     let expression_inside = parse_expr(parser, &0)?;
     parser.expect(&TokenKind::CloseParen)?;
 
-    debug_expression(&format!("parsed grouping ",));
-
     Ok(Expression::Grouping(
         Box::new(expression_inside),
         parser.get_current_debug_data()?,
     ))
     .context("grouping nod")
+}
+pub fn parse_reference(parser: &mut Parser) -> Result<Expression> {
+    parser.expect(&TokenKind::Reference)?;
+    Ok(Expression::Reference(
+        Box::new(parse_expr(parser, &0)?),
+        parser.get_current_debug_data()?,
+    ))
 }
 pub fn parse_bool_nod(parser: &mut Parser) -> Result<Expression> {
     Ok(match parser.advance()?.kind {
