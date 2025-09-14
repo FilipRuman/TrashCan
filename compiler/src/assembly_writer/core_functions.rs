@@ -1,9 +1,8 @@
+use super::data_structures::Data;
 use super::{
     AssemblyData, ExpressionOutput,
-    assembly_instructions::{self, comment, phrp, read, set},
-    data_structures::{self, Data},
+    assembly_instructions::{self, phrp, set},
     handle_expr,
-    helper_methods::read_data_off_stack,
 };
 use crate::{assembly_writer::data_structures::DataType, parser::expression::Expression};
 use anyhow::*;

@@ -14,7 +14,7 @@ pub fn parse_indexing_array(parser: &mut Parser, _: &i8, left: Expression) -> Re
     }
     parser.expect(&TokenKind::CloseBracket)?;
 
-    Ok(Expression::IndexArray {
+    Ok(Expression::SquareBrackets {
         left: Box::new(left.clone()),
         indexes,
         debug_data: parser.get_current_debug_data()?,
@@ -448,11 +448,12 @@ pub fn parse_binary_expr(parser: &mut Parser, bp: &i8, left: Expression) -> Resu
 }
 pub fn parse_member_expr(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::Dot)?;
-    let name = parser.expect(&TokenKind::Identifier)?.value.to_string();
+
+    let right = parse_expr(parser, &0)?;
 
     Ok(Expression::MemberExpr {
-        member: Box::new(left),
-        name,
+        left: Box::new(left),
+        right: Box::new(right),
         debug_data: parser.get_current_debug_data()?,
     })
     .context("member expr")

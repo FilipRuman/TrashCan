@@ -1,8 +1,5 @@
-use std::fmt::format;
-
-use super::AssemblyData;
 pub fn comment(text: &str) -> String {
-    format!("// {text}\n")
+    format!("// {}\n", text.replace("\n", "\n //"))
 }
 
 /// Copies value from `x` registry into `y` registry.

@@ -99,8 +99,8 @@ pub enum Expression {
         debug_data: DebugData,
     },
     MemberExpr {
-        member: Box<Expression>,
-        name: String,
+        left: Box<Expression>,
+        right: Box<Expression>,
 
         debug_data: DebugData,
     },
@@ -121,7 +121,7 @@ pub enum Expression {
 
         debug_data: DebugData,
     },
-    IndexArray {
+    SquareBrackets {
         left: Box<Expression>,
         indexes: Vec<Expression>,
 
@@ -149,15 +149,6 @@ pub enum Expression {
     FunctionCall {
         left: Box<Expression>,
         values: Vec<Expression>,
-        debug_data: DebugData,
-    },
-    Out {
-        var_type: Option<Type>,
-        var_name: String,
-        debug_data: DebugData,
-    },
-    PrintRaw {
-        value: Box<Expression>,
         debug_data: DebugData,
     },
 }
@@ -230,8 +221,8 @@ impl Expression {
                 debug_data,
             } => debug_data,
             Expression::MemberExpr {
-                member,
-                name,
+                left: member,
+                right: name,
                 debug_data,
             } => debug_data,
             Expression::Return { value, debug_data } => debug_data,
@@ -245,7 +236,7 @@ impl Expression {
                 inside,
                 debug_data,
             } => debug_data,
-            Expression::IndexArray {
+            Expression::SquareBrackets {
                 left,
                 indexes,
                 debug_data,
@@ -271,13 +262,7 @@ impl Expression {
                 values,
                 debug_data,
             } => debug_data,
-            Expression::Out {
-                var_type,
-                var_name,
-                debug_data,
-            } => debug_data,
-            Expression::PrintRaw { value, debug_data } => debug_data,
-            Expression::Reference(expression, debug_data) => debug_data,
+                       Expression::Reference(expression, debug_data) => debug_data,
             Expression::Boolean(_, debug_data) => todo!(),
         }
     }

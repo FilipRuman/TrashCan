@@ -8,7 +8,11 @@ use log::info;
 
 use crate::parser::expression::DebugData;
 
-use super::{assembly_instructions::*, helper_methods::*};
+use super::{
+    assembly_instructions::*,
+    expression_handler_functions::{functions::data_types::Function, structs::data_types::Struct},
+    helper_methods::*,
+};
 
 pub struct AssemblyData {
     pub free_registries: VecDeque<u8>,
@@ -24,106 +28,13 @@ pub struct VariableCodeBlocks {
     pub code_block_type: CodeBlockType,
 }
 pub enum CodeBlockType {
-    If,
-    FunctionCall,
+    /// allows you to access variables form parent code blocks, eg. if statement, for-loop  
+    Inclusive,
+
+    /// blocks you from accessing variables from parent code blocks, eg. function calls
+    Exclusive,
 }
 
-#[derive(Clone, Debug)]
-pub struct Function {
-    pub name: String,
-    pub input: Vec<FunctionInputData>,
-    pub output: Option<FunctionInputData>,
-    pub label_name: String,
-}
-#[derive(Clone, Debug)]
-pub struct FunctionInputData {
-    pub name: String,
-    pub data_type: DataType,
-    pub is_reference: bool,
-    // this will be negative because allocated on parent stack frame
-    pub stack_frame_offset: i32,
-}
-impl FunctionInputData {
-    pub fn assign(&self, data: &Data, assembly_data: &mut AssemblyData) -> Result<String> {
-        let mut output_code = String::new();
-        let copy_register = assembly_data.get_free_register()?;
-
-        let offset_register = assembly_data.get_free_register()?;
-        if self.is_reference {
-            output_code += &(set(offset_register, self.stack_frame_offset as u32)
-                + &set(copy_register, data.stack_frame_offset as u32)
-                + &add(copy_register, STACK_FRAME_POINTER)
-                + &write_data_to_stack(offset_register, copy_register));
-        } else {
-            for offset in 0..data.size {
-                output_code += &(set(
-                    offset_register,
-                    (offset as i32 + self.stack_frame_offset) as u32,
-                ) + &data.read_register(copy_register, offset, assembly_data)?
-                    + &write_data_to_stack(offset_register, copy_register));
-            }
-        }
-
-        assembly_data.mark_registers_free(&[offset_register, copy_register]);
-        Ok(output_code)
-    }
-}
-#[derive(Clone, Debug)]
-pub struct Struct {
-    pub size: u32,
-    pub name: String,
-    pub properties: HashMap<String, StructProperty>,
-}
-impl Struct {
-    pub fn access_property(
-        &self,
-        stack_frame_offset: u32,
-        name: String,
-        debug_data: DebugData,
-        assembly_data: &mut AssemblyData,
-    ) -> Result<ExpressionOutput> {
-        let mut output_code = String::new();
-        let property = self.properties.get(&name).with_context(|| {
-            format!(
-                "there was not property with name:'{name}' on:'{}, {debug_data:?}",
-                self.name
-            )
-        })?;
-        let stack_alloc = assembly_data.allocate_stack(1)?;
-        output_code += &stack_alloc.0;
-        let pointer_stack_offset_register = assembly_data.get_free_register()?;
-        let alloc_addr_register = assembly_data.get_free_register()?;
-
-        if property.is_reference {
-            todo!()
-        } else {
-            output_code += &(set(alloc_addr_register, stack_alloc.1)
-                + &set(
-                    pointer_stack_offset_register,
-                    stack_frame_offset + property.offset_from_struct_base,
-                ));
-        }
-
-        write_data_to_stack(alloc_addr_register, pointer_stack_offset_register);
-        assembly_data.mark_registers_free(&[pointer_stack_offset_register, alloc_addr_register]);
-        Ok(ExpressionOutput {
-            code: output_code,
-            data: Some(Data {
-                stack_frame_offset: stack_alloc.1 as i32,
-                size: property.data_type.size(assembly_data)?,
-                is_reference: true,
-                data_type: property.data_type.clone(),
-            }),
-        })
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct StructProperty {
-    pub is_reference: bool,
-    pub data_type: DataType,
-    pub offset_from_struct_base: u32,
-}
 impl AssemblyData {
     pub fn add_var(&mut self, data: Data, name: String) -> Result<()> {
         for code_block in &self.variable_code_blocks {
@@ -131,7 +42,7 @@ impl AssemblyData {
                 bail!("variable with name:'{name}' already exists!");
             }
 
-            if let CodeBlockType::FunctionCall = code_block.code_block_type {
+            if let CodeBlockType::Exclusive = code_block.code_block_type {
                 break;
             }
         }
@@ -158,7 +69,7 @@ impl AssemblyData {
                 None => {}
             }
 
-            if let CodeBlockType::FunctionCall = code_block.code_block_type {
+            if let CodeBlockType::Exclusive = code_block.code_block_type {
                 {
                     break;
                 }
@@ -167,10 +78,12 @@ impl AssemblyData {
         bail!("variable with name: {name} was not found!");
     }
 
-    pub fn find_struct(&self, name: &str) -> Result<&Struct> {
-        self.structs
-            .get(name)
-            .with_context(|| format!("struct with name: {name} was not found!"))
+    pub fn find_struct(&self, name: &str) -> Result<Struct> {
+        if let Some(struct_val) = self.structs.get(name) {
+            Ok(struct_val.clone())
+        } else {
+            bail!("struct with name: {name} was not found!")
+        }
     }
     pub fn find_function(&self, name: &str) -> Result<&Function> {
         self.functions
@@ -184,7 +97,7 @@ impl AssemblyData {
             free_registries: (0..=253).collect(),
             variable_code_blocks: vec![VariableCodeBlocks {
                 variables: HashMap::new(),
-                code_block_type: CodeBlockType::FunctionCall,
+                code_block_type: CodeBlockType::Exclusive,
             }]
             .into(),
             current_label_id: 0,
@@ -367,6 +280,13 @@ pub enum DataType {
     Char,
     Array { inside: Box<DataType> },
     Struct { name: String },
+    // offset_from_reference_addr -> this means that to read the actual data you need to read addr
+    // stored in a reference and then add this offset to it. this is used to read data inside
+    // references to a structs
+    // Reference {
+    //     inside: Box<DataType>,
+    //     offset_of_data_from_reference_addr: u32,
+    // },
 }
 impl DataType {
     pub fn to_string(&self) -> String {
@@ -391,7 +311,13 @@ impl DataType {
                 "bool" => (false, DataType::Bool),
                 "char" => (false, DataType::Char),
                 other => {
-                    bail!("data type with name:{other} was not handled by DataType::parse_type()");
+                    if assembly_data.find_struct(&name).is_ok() {
+                        return Ok((false, DataType::Struct { name }));
+                    }
+
+                    bail!(
+                        "data type with name:{other} was not handled by DataType::parse_type().\n Most of the time this means that struct with that name doesn't exist!"
+                    );
                 }
             },
             crate::parser::types::Type::Array {

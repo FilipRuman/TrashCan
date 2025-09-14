@@ -1,10 +1,18 @@
-let type : NewType = NewType[a = 32];
+// TODO: support assigning to array indexing, support for functions inside structs, for/while loops support
 
+let direct : &NewType = 
+&NewType[a = 32, b = 6];
 
-
-halt();
-
-struct NewType{
-a : u32,
+let array : NewType[] = {
+NewType[a = 32, b = 6],
+NewType[a = 8, b = 1],
 }
 
+
+print_raw(direct.b);
+
+halt();
+struct NewType{
+a : u32,
+b : u32,
+}

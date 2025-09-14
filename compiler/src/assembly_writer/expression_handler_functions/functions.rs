@@ -1,3 +1,6 @@
+pub mod data_types;
+
+use crate::assembly_writer::data_types::FunctionInputData;
 use std::collections::HashMap;
 
 use crate::{
@@ -11,6 +14,7 @@ use crate::{
     parser::expression::{DebugData, Expression},
 };
 use anyhow::{Context, Result, bail};
+use data_types::Function;
 use log::*;
 pub fn parse_function_declarations(
     expressions: &Vec<Expression>,
@@ -137,7 +141,7 @@ pub fn handle_function(
         .variable_code_blocks
         .push_front(VariableCodeBlocks {
             variables: HashMap::new(),
-            code_block_type: CodeBlockType::FunctionCall,
+            code_block_type: CodeBlockType::Exclusive,
         });
 
     for input in &function.input {
@@ -358,26 +362,23 @@ pub fn convert_expression_to_function_name(
     expression: Expression,
     assembly_data: &mut AssemblyData,
 ) -> Result<String> {
-    match expression {
+    let base_name = match expression {
         Expression::Identifier(name, _) => {
             if let Ok(var) = assembly_data.find_var(&name) {
-                return Ok(var.data_type.to_string());
+                var.data_type.to_string()
+            } else {
+                name
             }
-            // if let Ok(_) = assembly_data.find_struct(&name) {
-            //     return Ok(name);
-            // }
-
-            Ok(name)
-            // bail!("cannot find value '{name}' in this scope!");
         }
         Expression::MemberExpr {
-            member,
-            name,
+            left,
+            right,
             debug_data: _,
-        } => Ok(format!(
-            "{}.{name}",
-            convert_expression_to_function_name(*member, assembly_data)?
-        )),
+        } => format!(
+            "{}.{}",
+            convert_expression_to_function_name(*left, assembly_data)?,
+            convert_expression_to_function_name(*right, assembly_data)?
+        ),
 
         other => {
             bail!(
@@ -385,7 +386,14 @@ pub fn convert_expression_to_function_name(
                 other.debug_data()
             )
         }
-    }
+    };
+    Ok(
+        if let Ok(name) = assembly_data.find_var(&assembly_data.current_var_name) {
+            format!("{}.{}", name.data_type.to_string(), base_name)
+        } else {
+            base_name
+        },
+    )
 }
 
 pub fn handle_core_function_call(

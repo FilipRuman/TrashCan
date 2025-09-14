@@ -2,7 +2,10 @@ use anyhow::*;
 
 use crate::parser::expression::DebugData;
 
-use super::{Data, Function, assembly_instructions::*, data_structures::AssemblyData};
+use super::{
+    Data, assembly_instructions::*, data_structures::AssemblyData,
+    expression_handler_functions::functions::data_types::Function,
+};
 
 pub const STACK_HEAD_POINTER: u8 = 254;
 pub const STACK_FRAME_POINTER: u8 = 255;

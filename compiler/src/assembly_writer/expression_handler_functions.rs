@@ -1,4 +1,5 @@
 pub mod functions;
+pub mod structs;
 
 use crate::{
     lexer::tokens::Token,
@@ -8,6 +9,7 @@ use crate::{
     },
 };
 use anyhow::{Context, Result, anyhow, bail};
+use structs::{handle_struct_access, handle_struct_initialization};
 
 use super::{
     assembly_instructions::*,
@@ -19,6 +21,41 @@ use super::{
     *,
 };
 
+pub fn handle_member_expression(
+    left: Expression,
+    right: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    // 1 if current var is struct: call - handle_struct_access it will push new variables into
+    //   scope
+    // 2. handle 'right' expr
+    // 3. if current var is struct: pop current var scope.
+
+    let mut output_code = String::new();
+    let left_expr_output = handle_expr(left, assembly_data)?;
+    output_code += &left_expr_output.code;
+    let var = left_expr_output
+        .data
+        .context("left expression was not valid- lack of output data!")?;
+
+    let (right_expr_output, var_was_struct) = match var.data_type.clone() {
+        DataType::Struct { name } => {
+            let context = format!("handle_struct_access, struct_name: {name}, variable: {var:?}");
+            handle_struct_access(var.clone(), name, assembly_data).context(context)?;
+            (handle_expr(right, assembly_data)?, true)
+        }
+        _ => (handle_expr(right, assembly_data)?, false),
+    };
+    if var_was_struct {
+        assembly_data.variable_code_blocks.pop_front();
+    }
+    output_code += &right_expr_output.code;
+
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: right_expr_output.data,
+    })
+}
 pub fn handle_assignment(
     target: Expression,
     operator: Token,
@@ -331,14 +368,7 @@ pub fn handle_identifier(
         data: Some(variable.to_owned()),
     })
 }
-pub fn handle_struct_initialization(
-    struct_type: Struct,
-    assembly_data: &mut AssemblyData,
-) -> Result<ExpressionOutput> {
 
-todo!()
-
-}
 pub fn handle_bool(value: bool, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
     let register = assembly_data.get_free_register()?;
@@ -538,9 +568,8 @@ pub fn handle_array_indexing(
 }
 pub fn handle_open_square_brackets(
     left: Expression,
-    inside_expr: Expression,
+    inside_expr: Vec<Expression>,
     assembly_data: &mut AssemblyData,
-    debug_data: DebugData,
 ) -> Result<ExpressionOutput> {
     info!("handle_open_brackets");
     let name = if let Expression::Identifier(name, _) = left {
@@ -548,10 +577,19 @@ pub fn handle_open_square_brackets(
     } else {
         bail!("expected left to be: Expression::Identifier found: {left:?}");
     };
+    let find_struct = assembly_data.find_struct(&name);
     if let Ok(var) = assembly_data.find_var(&name) {
-        handle_array_indexing(var.to_owned(), inside_expr, assembly_data)
-    } else if let Ok(struct_type) = assembly_data.find_struct(&name) {
-        handle_struct_initialization(struct_type.to_owned(), assembly_data)
+        handle_array_indexing(
+            var.to_owned(),
+            inside_expr
+                .first()
+                .context("found no data needed for indexing an array {}")?
+                .clone(),
+            assembly_data,
+        )
+    } else if let Ok(struct_type) = find_struct {
+        handle_struct_initialization(struct_type.to_owned(), assembly_data, inside_expr.clone())
+            .with_context(|| format!("handle_struct_initialization, target struct_type:'{:#?}', found_expression:'{:#?}'", &struct_type,&inside_expr))
     } else {
         bail!(
             "The identifier before the opening brackets is neither a variable name nor a struct name!"
@@ -591,7 +629,7 @@ pub fn handle_if(
         .variable_code_blocks
         .push_front(VariableCodeBlocks {
             variables: HashMap::new(),
-            code_block_type: CodeBlockType::If,
+            code_block_type: CodeBlockType::Inclusive,
         });
     let mut output_code = String::new();
     output_code += &comment(&format!("if- condition: {condition:?}"));

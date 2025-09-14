@@ -1,23 +1,18 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
-use anyhow::{Context, Result, anyhow, bail};
-use assembly_instructions::{cp, halt, set, write};
+use anyhow::{Context, Result, bail};
+use assembly_instructions::halt;
 use data_structures::*;
 use expression_handler_functions::{
-    functions::*, handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
-    handle_identifier, handle_if, handle_number, handle_open_square_brackets, handle_reference,
-    handle_struct_initialization, handle_variable_declaration,
+    functions::*,
+    handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
+    handle_identifier, handle_if, handle_member_expression, handle_number,
+    handle_open_square_brackets, handle_reference, handle_variable_declaration,
+    structs::data_types::{Struct, StructProperty},
 };
-use helper_methods::{read_data_off_stack, write_data_to_stack};
 use log::info;
 
-use crate::{
-    lexer::tokens::TokenKind,
-    parser::{
-        expression::{DebugData, Expression},
-        types::parse_type,
-    },
-};
+use crate::{lexer::tokens::TokenKind, parser::expression::Expression};
 
 pub mod assembly_instructions;
 pub mod core_functions;
@@ -43,10 +38,10 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
         {
             let mut size = 0;
             let mut struct_properties = HashMap::with_capacity(properties_expr.len());
-            for property_expr in properties_expr.to_owned() {
-                let debug_data = property_expr.debug_data().clone();
+            for property_expr in properties_expr {
+                let debug_data = property_expr.debug_data();
                 let (name, struct_property) =
-                    handle_struct_property(property_expr, size, &mut assembly_data)
+                    handle_struct_property(property_expr.clone(), size, &mut assembly_data)
                         .with_context(|| format!("{debug_data:?}"))?;
 
                 size += struct_property.data_type.size(&mut assembly_data)?;
@@ -65,13 +60,15 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
     }
 
     parse_function_declarations(&expressions, &mut assembly_data)?;
-    // parse struct contents
+    // parse functions inside structs
+    //TODO:
 
     assembly_data.current_offset_from_stack_frame_base = 0;
     // parse rest
     for expression in expressions {
         info!("new expr- {expression:?}");
         output += &handle_expr(expression, &mut assembly_data)?.code;
+        assembly_data.current_var_name.clear();
     }
     output += &halt();
 
@@ -163,13 +160,13 @@ fn handle_expr(
                 properties,
                 functions,
                 debug_data,
-            } => todo!(),
+            } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
         Expression::StructProperty {
                 var_name,
                 var_type,
                 debug_data,
-            } => todo!(),
-        Expression::StructFunction { name, debug_data } => todo!(),
+            } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
+        Expression::StructFunction { name, debug_data } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
         Expression::Binary {
                 left,
                 operator,
@@ -180,7 +177,7 @@ fn handle_expr(
                 name,
                 properties,
                 debug_data,
-            } => todo!(),
+            } => bail!("this shouldn't be ever called"),
         Expression::ArrayInitialization {
                 properties,
                 debug_data,
@@ -201,10 +198,11 @@ fn handle_expr(
                 "this should not be called because function properties are directly handled by parsing function declarations!"
             ),
         Expression::MemberExpr {
-                member,
-                name,
+                left,
+                right,
                 debug_data,
-            } => todo!(),
+            } => handle_member_expression(*left,
+                *right,assembly_data),
         Expression::Return { value, debug_data } => todo!(),
         Expression::If {
                 condition,
@@ -216,11 +214,11 @@ fn handle_expr(
                 inside,
                 debug_data,
             } => todo!(),
-        Expression::IndexArray {
+        Expression::SquareBrackets {
                 left,
                 indexes,
                 debug_data,
-            } => handle_open_square_brackets(*left, indexes[0].clone(), assembly_data, debug_data),
+            } => handle_open_square_brackets(*left, indexes, assembly_data),
         Expression::While {
                 condition,
                 inside,
@@ -242,12 +240,6 @@ fn handle_expr(
                 values,
                 debug_data,
             } => handle_function_call(*left, values, debug_data, assembly_data),
-        Expression::Out {
-                var_type,
-                var_name,
-                debug_data,
-            } => todo!(),
-        Expression::PrintRaw { value, debug_data } => todo!(),
-        Expression::Reference(expression, debug_data) => handle_reference(*expression,assembly_data),
+                Expression::Reference(expression, debug_data) => handle_reference(*expression,assembly_data),
     }.with_context(|| format!("Handle expression: {expression:?}"))
 }
