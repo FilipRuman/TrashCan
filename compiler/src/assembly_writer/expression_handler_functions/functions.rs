@@ -45,12 +45,11 @@ pub fn parse_function_declarations(
                     bail!("expected function property!");
                 };
 
-                let (is_reference, data_type) = DataType::parse_type(input_type, assembly_data)?;
+                let data_type = DataType::parse_type(input_type, assembly_data)?;
 
                 let offset = current_stack_offset;
                 current_stack_offset -= data_type.size(assembly_data)? as i32;
                 input.push(FunctionInputData {
-                    is_reference,
                     name: var_name.to_owned(),
                     data_type,
                     stack_frame_offset: offset,
@@ -60,12 +59,11 @@ pub fn parse_function_declarations(
                 if output_type.is_none() {
                     None
                 } else {
-                    let (is_reference, data_type) = DataType::parse_type(
+                    let data_type = DataType::parse_type(
                         output_type.as_ref().unwrap().to_owned(),
                         assembly_data,
                     )?;
                     Some(FunctionInputData {
-                        is_reference,
                         name: name.to_owned(),
                         data_type,
                         stack_frame_offset: current_stack_offset,
@@ -151,7 +149,6 @@ pub fn handle_function(
                 stack_frame_offset: input.stack_frame_offset,
                 size,
                 data_type: input.data_type.to_owned(),
-                is_reference: input.is_reference,
             },
             input.name.to_owned(),
         )?;
@@ -279,17 +276,16 @@ pub fn call_function_code(
     let source_register = assembly_data.get_free_register()?;
     let source_offset_register = assembly_data.get_free_register()?;
     for (input_data, function_input) in data_input.iter().zip(function.input) {
-        if function_input.is_reference {
-            // smth. is wrong in here, doesn't read destination addr
-            // read destination addr
+        if function_input.data_type.is_reference() {
             output_code += &comment("call_function_code - handle reference variable");
             output_code += &(set(
                 destination_addr_register,
                 function_input.stack_frame_offset as u32,
             ) + &add(destination_addr_register, STACK_HEAD_POINTER));
 
-            if input_data.is_reference {
-                output_code += &input_data.read_pointer_addr(source_register, assembly_data)?;
+            if input_data.is_reference() {
+                output_code +=
+                    &input_data.read_referenced_address(source_register, assembly_data)?;
             } else {
                 output_code += &input_data.read_addr_of_self(source_register);
             }
@@ -335,8 +331,6 @@ pub fn call_function_code(
             stack_frame_offset: assembly_data.current_offset_from_stack_frame_base as i32
                 + output.stack_frame_offset,
             size: output.data_type.size(assembly_data)?,
-            is_reference: output.is_reference,
-
             data_type: output.data_type,
         })
     } else {
@@ -388,7 +382,7 @@ pub fn convert_expression_to_function_name(
         }
     };
     Ok(
-        if let Ok(name) = assembly_data.find_var(&assembly_data.current_var_name) {
+        if let Ok(name) = assembly_data.find_var(&assembly_data.current_var_name_for_function) {
             format!("{}.{}", name.data_type.to_string(), base_name)
         } else {
             base_name

@@ -1,18 +1,16 @@
-// TODO: support assigning to array indexing, support for functions inside structs, for/while loops support
-
-let direct : &NewType = 
-&NewType[a = 32, b = 6];
-
-let array : NewType[] = {
-NewType[a = 32, b = 6],
-NewType[a = 8, b = 1],
-}
+// TODO: structs,support for functions inside structs, for/while loops support, test binary operations
 
 
-print_raw(direct.b);
+let tst : &TestStruct= &TestStruct[a= 66, b= 1 ];
+tst.a = 1; 
+print_raw(a);
 
 halt();
-struct NewType{
-a : u32,
-b : u32,
+
+struct  TestStruct{
+a: u32,
+b: u32,
 }
+struct NextStruct{
+
+};

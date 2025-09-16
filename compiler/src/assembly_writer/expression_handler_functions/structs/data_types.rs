@@ -11,7 +11,6 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 pub struct StructProperty {
-    pub is_reference: bool,
     pub data_type: DataType,
     pub offset_from_struct_base: u32,
 }

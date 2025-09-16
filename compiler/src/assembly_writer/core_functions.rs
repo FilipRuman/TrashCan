@@ -16,13 +16,12 @@ pub fn array_len(assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let data = Data {
         stack_frame_offset: alloc_out.1 as i32,
         size: 1,
-        is_reference: false,
         data_type: DataType::U32,
     };
 
     let read_register = assembly_data.get_free_register()?;
     let var = assembly_data
-        .find_var(&assembly_data.current_var_name)?
+        .find_var(&assembly_data.current_var_name_for_array_initialization)?
         .clone();
     output_code += &var.read_register(read_register, 0, assembly_data)?;
     output_code += &data.write_register(read_register, 0, assembly_data)?;
@@ -44,7 +43,7 @@ pub fn print_raw(value: Expression, assembly_data: &mut AssemblyData) -> Result<
     let expression_output = handle_expr(value, assembly_data)?;
     output_code += &expression_output.code;
 
-    for data in expression_output.data {
+    if let Some(data) = expression_output.data {
         for register in 0..data.size {
             output_code +=
                 &(data.read_register(serial_out_data_registry, register, assembly_data)?

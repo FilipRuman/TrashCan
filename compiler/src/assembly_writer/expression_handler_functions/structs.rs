@@ -8,12 +8,13 @@ use log::info;
 
 use crate::{
     assembly_writer::{
-        assembly_instructions::comment,
+        assembly_instructions::{add, comment, set, write},
         data_structures::{
             AssemblyData, CodeBlockType, Data, DataType, ExpressionOutput, VariableCodeBlocks,
         },
         expression_handler_functions::functions::handle_function_call,
         handle_expr,
+        helper_methods::{STACK_FRAME_POINTER, read_data_off_stack},
     },
     parser::expression::Expression,
 };
@@ -78,7 +79,6 @@ pub fn handle_struct_initialization(
                     + target_property_type.offset_from_struct_base)
                     as i32,
                 size: target_property_type.data_type.size(assembly_data)?,
-                is_reference: target_property_type.is_reference,
                 data_type: target_property_type.data_type.clone(),
             };
             assembly_data.add_var(property_data, property_name)?;
@@ -126,7 +126,6 @@ pub fn handle_struct_initialization(
         data: Some(Data {
             stack_frame_offset: alloc_base_stack_offset as i32,
             size: struct_type.size,
-            is_reference: false,
             data_type: DataType::Struct {
                 name: struct_type.name,
             },
@@ -137,37 +136,58 @@ pub fn handle_struct_access(
     base_variable: Data,
     struct_name: String,
     assembly_data: &mut AssemblyData,
-) -> Result<()> {
+) -> Result<String> {
+    info!("handle_struct_access");
     let struct_type = assembly_data
         .find_struct(&struct_name)
         .with_context(|| format!("there is no struct type with name: '{struct_name}'"))?;
 
     let mut variables = HashMap::with_capacity(struct_type.properties.len());
+    let mut output_code = String::new();
+
+    output_code += &comment(&format!(
+        "handle_struct_access- {base_variable:?} {struct_name:?}"
+    ));
+    let struct_base_addr_register = assembly_data.get_free_register()?;
+    let reference_base_addr_register = assembly_data.get_free_register()?;
+
+    // read base addr of struct
+    output_code += &(set(reference_base_addr_register, 0)
+        + &base_variable.read_addr_of_register(
+            struct_base_addr_register,
+            reference_base_addr_register,
+            assembly_data,
+        )?);
+
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+
+    // read struct base addr
+    output_code += &(set(reference_base_addr_register, alloc_out.1)
+        + &add(reference_base_addr_register, STACK_FRAME_POINTER)
+        + &write(reference_base_addr_register, struct_base_addr_register));
 
     for property in struct_type.properties {
-
-        if base_variable.is_reference{
-
-        }else {
-
-        }
         variables.insert(
             property.0,
             Data {
-                stack_frame_offset: base_variable.stack_frame_offset
-                    + property.1.offset_from_struct_base as i32,
+                stack_frame_offset: alloc_out.1 as i32,
                 size: property.1.data_type.size(assembly_data)?,
-                is_reference: property.1.is_reference,
-                data_type: property.1.data_type,
+                data_type: DataType::Reference {
+                    inside: Box::new(property.1.data_type),
+                    offset_of_data_from_reference_addr: property.1.offset_from_struct_base,
+                },
             },
         );
     }
 
+    output_code += &comment(&format!("handle_struct_access- end"));
     assembly_data
         .variable_code_blocks
         .push_front(VariableCodeBlocks {
             variables,
             code_block_type: CodeBlockType::Exclusive,
         });
-    Ok(())
+    assembly_data.mark_registers_free(&[struct_base_addr_register, reference_base_addr_register]);
+    Ok(output_code)
 }

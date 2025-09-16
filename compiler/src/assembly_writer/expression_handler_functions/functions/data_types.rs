@@ -17,7 +17,6 @@ pub struct Function {
 pub struct FunctionInputData {
     pub name: String,
     pub data_type: DataType,
-    pub is_reference: bool,
     // this will be negative because allocated on parent stack frame
     pub stack_frame_offset: i32,
 }
@@ -27,7 +26,7 @@ impl FunctionInputData {
         let copy_register = assembly_data.get_free_register()?;
 
         let offset_register = assembly_data.get_free_register()?;
-        if self.is_reference {
+        if self.data_type.is_reference() {
             output_code += &(set(offset_register, self.stack_frame_offset as u32)
                 + &set(copy_register, data.stack_frame_offset as u32)
                 + &add(copy_register, STACK_FRAME_POINTER)

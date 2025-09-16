@@ -68,7 +68,7 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
     for expression in expressions {
         info!("new expr- {expression:?}");
         output += &handle_expr(expression, &mut assembly_data)?.code;
-        assembly_data.current_var_name.clear();
+        assembly_data.current_var_name_for_function.clear();
     }
     output += &halt();
 
@@ -86,13 +86,12 @@ fn handle_struct_property(
         debug_data,
     } = expr
     {
-        let (is_reference, data_type) = DataType::parse_type(var_type, assembly_data)?;
+        let data_type = DataType::parse_type(var_type, assembly_data)?;
         Ok((
             var_name.to_owned(),
             StructProperty {
                 data_type,
                 offset_from_struct_base,
-                is_reference,
             },
         ))
     } else {

@@ -11,15 +11,7 @@ use crate::{
 use anyhow::{Context, Result, anyhow, bail};
 use structs::{handle_struct_access, handle_struct_initialization};
 
-use super::{
-    assembly_instructions::*,
-    core_functions::{halt_func, print_raw},
-    helper_methods::{
-        STACK_FRAME_POINTER, STACK_HEAD_POINTER, change_stack_frame_pointer,
-        validate_data_input_for_function,
-    },
-    *,
-};
+use super::{assembly_instructions::*, helper_methods::STACK_FRAME_POINTER, *};
 
 pub fn handle_member_expression(
     left: Expression,
@@ -38,11 +30,20 @@ pub fn handle_member_expression(
         .data
         .context("left expression was not valid- lack of output data!")?;
 
-    let (right_expr_output, var_was_struct) = match var.data_type.clone() {
+    let (right_expr_output, var_was_struct) = match var.data_type.unwrap_from_references().clone() {
         DataType::Struct { name } => {
             let context = format!("handle_struct_access, struct_name: {name}, variable: {var:?}");
-            handle_struct_access(var.clone(), name, assembly_data).context(context)?;
-            (handle_expr(right, assembly_data)?, true)
+            let mut code =
+                handle_struct_access(var.clone(), name, assembly_data).context(context)?;
+            let expr_out = handle_expr(right, assembly_data)?;
+            code += &expr_out.code;
+            (
+                ExpressionOutput {
+                    code,
+                    data: expr_out.data,
+                },
+                true,
+            )
         }
         _ => (handle_expr(right, assembly_data)?, false),
     };
@@ -65,28 +66,10 @@ pub fn handle_assignment(
     let mut output_code: String = String::new();
 
     output_code += &comment("assignment");
-    let (binary_expression_left, variable_name) = match target.clone() {
-        Expression::Identifier(value, _debug) => (target.clone(), value.clone()),
-        Expression::VariableDeclaration {
-            var_type: _,
-            name,
-            mutable: _,
-            debug_data,
-        } => {
-            let expression_output = super::handle_expr(target.clone(), assembly_data)?.clone();
-            output_code += &expression_output.code;
-            (
-                Expression::Identifier(name.to_owned(), debug_data.to_owned()),
-                name.clone(),
-            )
-        }
-        other => {
-            return Err(anyhow!(
-                "expected identifier or variable declaration found: {other:?} {:?}",
-                target.debug_data()
-            ));
-        }
-    };
+    let target_expr_out = handle_expr(target.clone(), assembly_data)?;
+    output_code += &target_expr_out.code;
+
+    assembly_data.current_var_name_for_function.clear();
 
     let data = if operator.value != "=" {
         let binary_operator = Token {
@@ -95,12 +78,8 @@ pub fn handle_assignment(
             line: operator.line,
         };
 
-        let binary_expr_output = handle_binary_expr(
-            binary_expression_left,
-            binary_operator,
-            value,
-            assembly_data,
-        )?;
+        let binary_expr_output =
+            handle_binary_expr(target.clone(), binary_operator, value, assembly_data)?;
         output_code += &binary_expr_output.code;
         binary_expr_output
             .data
@@ -114,15 +93,14 @@ pub fn handle_assignment(
             .clone()
     };
 
-    let variable = assembly_data
-        .find_var(&variable_name)
-        .context("handle_assignment")?
-        .clone();
+    let target_data = target_expr_out
+        .data
+        .context("expected target expression to output data!")?;
 
-    if data.data_type != variable.data_type {
+    if !data.data_type.eq(&target_data.data_type) {
         return Err(anyhow!(
             "expected: {:?} found: {:?} {:?}",
-            variable.data_type,
+            target_data.data_type,
             data.data_type,
             target.debug_data()
         ));
@@ -133,19 +111,22 @@ pub fn handle_assignment(
 
     output_code += &comment(&format!(
         "assignment- variable.is_reference: {} data.is_reference: {} ",
-        variable.is_reference, data.is_reference
+        target_data.is_reference(),
+        data.is_reference()
     ));
 
-    if variable.is_reference && data.is_reference {
-        output_code += &data.read_pointer_addr(read_registry, assembly_data)?;
+    if target_data.is_reference() && data.is_reference() {
+        output_code += &data.read_referenced_address(read_registry, assembly_data)?;
         output_code +=
-            &variable.write_directly_to_reference_pointer(read_registry, assembly_data)?;
+            &target_data.write_to_last_reference_in_chain(read_registry, assembly_data)?;
     } else {
-        for offset in 0..variable.size {
+        for offset in 0..data.size {
             output_code += &data.read_register(read_registry, offset, assembly_data)?;
-            output_code += &variable.write_register(read_registry, offset, assembly_data)?;
+            output_code += &target_data.write_register(read_registry, offset, assembly_data)?;
         }
     }
+
+    assembly_data.current_var_name_for_function.clear();
 
     output_code += &comment("end assignment");
     assembly_data.mark_registers_free(&[read_registry]);
@@ -162,7 +143,10 @@ pub fn handle_reference(
     let mut output_code = String::new();
     output_code += &comment("handle_reference");
     let expr_out = handle_expr(inside, assembly_data)?;
+
     output_code += &expr_out.code;
+
+    output_code += &comment("handle_reference - handled expression");
     let (alloc_code, alloc_offset_from_stack_frame) = assembly_data.allocate_stack(1)?;
     output_code += &alloc_code;
     let addr_of_reference_register = assembly_data.get_free_register()?;
@@ -174,8 +158,10 @@ pub fn handle_reference(
     let data = Data {
         stack_frame_offset: alloc_offset_from_stack_frame as i32,
         size: 1,
-        is_reference: true,
-        data_type: data_of_reference.data_type,
+        data_type: DataType::Reference {
+            inside: Box::new(data_of_reference.data_type),
+            offset_of_data_from_reference_addr: 0,
+        },
     };
 
     output_code +=
@@ -197,14 +183,12 @@ pub fn handle_variable_declaration(
     assembly_data: &mut AssemblyData,
     debug_data: DebugData,
 ) -> Result<ExpressionOutput> {
-    assembly_data.current_var_name = variable_name.to_owned();
-    let (is_reference, data_type) = DataType::parse_type(variable_type, assembly_data)?;
+    assembly_data.current_var_name_for_array_initialization = variable_name.to_owned();
+    assembly_data.current_var_name_for_function = variable_name.to_owned();
 
-    let size = if is_reference {
-        1
-    } else {
-        data_type.size(assembly_data)?
-    };
+    let data_type = DataType::parse_type(variable_type, assembly_data)?;
+
+    let size = data_type.size(assembly_data)?;
 
     let mut code = comment(&format!("variable declaration: {variable_name}"));
     let (alloc_code, stack_offset) = assembly_data.allocate_stack(size)?;
@@ -214,7 +198,6 @@ pub fn handle_variable_declaration(
         stack_frame_offset: stack_offset as i32,
         size,
         data_type: data_type.clone(),
-        is_reference,
     };
     assembly_data
         .add_var(data.clone(), variable_name)
@@ -343,7 +326,6 @@ pub fn handle_binary_expr(
         stack_frame_offset: stack_frame_offset as i32,
         size,
         data_type: output_data_type,
-        is_reference: false,
     };
 
     output_code += &output_data.write_register(output_register, 0, assembly_data)?;
@@ -360,7 +342,8 @@ pub fn handle_identifier(
     assembly_data: &mut AssemblyData,
     debug_data: DebugData,
 ) -> Result<ExpressionOutput> {
-    assembly_data.current_var_name = name.to_owned();
+    assembly_data.current_var_name_for_array_initialization = name.to_owned();
+    assembly_data.current_var_name_for_function = name.to_owned();
 
     let variable = assembly_data.find_var(&name).context("handle_identifier")?;
     Ok(ExpressionOutput {
@@ -380,7 +363,6 @@ pub fn handle_bool(value: bool, assembly_data: &mut AssemblyData) -> Result<Expr
     let (code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
     output_code += &code;
     let data = Data {
-        is_reference: false,
         stack_frame_offset: stack_frame_offset as i32,
         size,
         data_type,
@@ -397,46 +379,49 @@ pub fn handle_array_initialization(
     assembly_data: &mut AssemblyData,
     debug_data: DebugData,
 ) -> Result<ExpressionOutput> {
-    let current_var = assembly_data
-        .find_var(&assembly_data.current_var_name)?
-        .clone();
     let mut output_code = String::new();
     output_code += &comment("array_initialization");
+    let mut inside_data_type_size = 0;
 
-    let inside_data_type = if let DataType::Array { inside } = current_var.data_type.clone() {
+    let data_copy_register = assembly_data.get_free_register()?;
+
+    let inside_data_type = if let DataType::Array { inside } = assembly_data
+        .find_var(&assembly_data.current_var_name_for_array_initialization)?
+        .data_type
+        .clone()
+    {
         *inside
     } else {
-        bail!(
-            "handle_array_initialization - expected current var type to be an array, found: {:?}",
-            current_var.data_type
-        )
+        bail!("expected last variable to be an array!")
     };
-
-    let inside_data_type_size = inside_data_type.size(assembly_data)?;
+    inside_data_type_size = inside_data_type.size(assembly_data)?;
     // +1 -> 0'th index = len
     let size = inside_data_type_size * properties.len() as u32 + 1;
-    let (allocation_code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
+    let (allocation_code, mut stack_frame_offset) = assembly_data.allocate_stack(size)?;
+
     output_code += &allocation_code;
     let output_data = Data {
         stack_frame_offset: stack_frame_offset as i32,
         size,
-        is_reference: false,
-        data_type: current_var.data_type,
+        data_type: DataType::Array {
+            inside: Box::new(inside_data_type.clone()),
+        },
     };
 
-    let data_copy_register = assembly_data.get_free_register()?;
     info!("handle_array_initialization- properties: {properties:?}");
-    // write array length
+    output_code += &comment(" write array length");
     output_code += &(set(data_copy_register, properties.len() as u32)
         + &output_data.write_register(data_copy_register, 0, assembly_data)?);
 
     for (i, property_expr) in properties.iter().enumerate() {
         info!("handle_array_initialization- property_expr: {property_expr:?}");
         let expr_out = handle_expr(property_expr.clone(), assembly_data)?;
-        output_code += &expr_out.code;
         let expr_data = expr_out
             .data
             .context("handle_array_initialization - input property")?;
+
+        output_code += &expr_out.code;
+
         if expr_data.data_type != inside_data_type {
             bail!(
                 "handle_array_initialization - expected input property nr.'{i}' to have type: {inside_data_type:?} found: {:?}",
@@ -473,11 +458,12 @@ pub fn handle_array_indexing(
     let mut output_code = String::new();
     output_code += &comment("index_array");
     output_code += &comment(&format!("index_array - var:{var_to_index:?}"));
-    let data_type = if let DataType::Array { inside } = var_to_index.data_type.clone() {
-        *inside
-    } else {
-        bail!("you can only index array variables!");
-    };
+    let data_type =
+        if let DataType::Array { inside } = var_to_index.data_type.unwrap_from_references() {
+            *inside
+        } else {
+            bail!("you can only index array variables!");
+        };
 
     let data_size = data_type.size(assembly_data)?;
     let allocation_out = assembly_data.allocate_stack(data_size)?;
@@ -486,8 +472,10 @@ pub fn handle_array_indexing(
     let data = Data {
         stack_frame_offset: allocation_out.1 as i32,
         size: data_size,
-        is_reference: true,
-        data_type,
+        data_type: DataType::Reference {
+            inside: Box::new(data_type),
+            offset_of_data_from_reference_addr: 0,
+        },
     };
 
     let index_expr_out = handle_expr(index_expr, assembly_data)?;
@@ -503,6 +491,7 @@ pub fn handle_array_indexing(
     output_code += &index_data.read_register(index_register, 0, assembly_data)?;
 
     let addr_register = assembly_data.get_free_register()?;
+
     let var_stack_frame_offset_register = assembly_data.get_free_register()?;
     output_code += &set(
         var_stack_frame_offset_register,
@@ -511,47 +500,27 @@ pub fn handle_array_indexing(
     let offset_register = assembly_data.get_free_register()?;
     output_code += &comment(&format!(
         "array indexing- var_to_index.is_reference: {}",
-        var_to_index.is_reference
+        var_to_index.is_reference()
     ));
 
-    let reference_addr_register = assembly_data.get_free_register()?;
-    if var_to_index.is_reference {
-        output_code += &(
-            // offset = i * data_size
-            cp(offset_register, index_register)
-                + &set(addr_register, data_size)
-                + &mul(offset_register, addr_register)
-                + &comment("add 1 offset to account for 1'st register holding size of array")
-                + &set(addr_register, 1)
-                + &add(offset_register, addr_register)
-        );
-
-        output_code += &(var_to_index.read_pointer_addr(reference_addr_register, assembly_data)?);
-        output_code += &comment(&format!(
-            "reference_addr_register-r{reference_addr_register}  now holds base addr of array"
-        ));
-
-        // address of indexed data = pointer_addr + offset_from_base_addr_of_var
-        output_code += &add(offset_register, reference_addr_register);
-
-        output_code += &(cp(addr_register, offset_register));
-
-        output_code += &(comment(&format!(
-            "reference_addr_register- r{reference_addr_register:?}, addr_register- r{addr_register}"
-        )));
-    } else {
-        output_code += &(cp(offset_register, index_register)
+    // setup offset register
+    output_code += &(
+        // offset = i * data_size
+        cp(offset_register, index_register)
             + &set(addr_register, data_size)
             + &mul(offset_register, addr_register)
-            + &add(offset_register, var_stack_frame_offset_register)
-            //offset to account for 1'st register holding size of array 
-            + &set(var_stack_frame_offset_register,2)+ &add(offset_register,var_stack_frame_offset_register));
+            + &comment("add 1 offset to account for 1'st register holding size of array")
+            + &set(addr_register, 1)
+            + &add(offset_register, addr_register)
+    );
 
-        output_code +=
-            &(cp(addr_register, offset_register) + &add(addr_register, STACK_FRAME_POINTER));
-    }
+    output_code +=
+        &var_to_index.read_addr_of_register(addr_register, offset_register, assembly_data)?;
+    output_code += &comment(&format!(
+        "index_array: read_addr_of_register - end addr_register:{addr_register} , offset_register:{offset_register}",
+    ));
+
     output_code += &data.write_directly_to_reference_pointer(addr_register, assembly_data)?;
-
     output_code += &comment("index_array - end");
 
     assembly_data.mark_registers_free(&[
@@ -559,7 +528,6 @@ pub fn handle_array_indexing(
         addr_register,
         offset_register,
         var_stack_frame_offset_register,
-        reference_addr_register,
     ]);
     Ok(ExpressionOutput {
         code: output_code,
@@ -587,6 +555,7 @@ pub fn handle_open_square_brackets(
                 .clone(),
             assembly_data,
         )
+        .context("handle_array_indexing")
     } else if let Ok(struct_type) = find_struct {
         handle_struct_initialization(struct_type.to_owned(), assembly_data, inside_expr.clone())
             .with_context(|| format!("handle_struct_initialization, target struct_type:'{:#?}', found_expression:'{:#?}'", &struct_type,&inside_expr))
@@ -607,7 +576,6 @@ pub fn handle_number(value: u32, assembly_data: &mut AssemblyData) -> Result<Exp
     let (code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
     output_code += &code;
     let data = Data {
-        is_reference: false,
         stack_frame_offset: stack_frame_offset as i32,
         size,
         data_type,
