@@ -31,10 +31,10 @@ pub fn jmpc(address_registry: u8, condition_registry: u8) -> String {
 pub fn jmpc_label(
     label_name: &str,
     label_addr_conversion_register: u8,
-    condition_registry: u8,
+    condition_register: u8,
 ) -> String {
     set_label(label_addr_conversion_register, label_name)
-        + &jmpc(label_addr_conversion_register, condition_registry)
+        + &jmpc(label_addr_conversion_register, condition_register)
 }
 pub fn jmp_label(label_name: &str, label_addr_conversion_register: u8) -> String {
     set_label(label_addr_conversion_register, label_name) + &jmp(label_addr_conversion_register)

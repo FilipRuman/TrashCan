@@ -8,6 +8,7 @@ use expression_handler_functions::{
     handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
     handle_identifier, handle_if, handle_member_expression, handle_number,
     handle_open_square_brackets, handle_reference, handle_variable_declaration,
+    loops::handle_while_loop,
     structs::data_types::{Struct, StructProperty},
 };
 use log::info;
@@ -26,7 +27,29 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
 
     info!("expressions: {expressions:#?}");
 
+    // INFO: I needed to split this so you can place other structs as properties inside
     // parse  struct declarations
+    for expression in &expressions {
+        if let Expression::Struct {
+            public,
+            name,
+            properties: properties_expr,
+            functions,
+            debug_data,
+        } = expression
+        {
+            assembly_data.structs.insert(
+                name.to_owned(),
+                Struct {
+                    size: 0,
+                    name: name.to_owned(),
+                    properties: HashMap::new(),
+                },
+            );
+        }
+    }
+    // TODO: Solve properties with struct types recursively
+    // parse struct properties
     for expression in &expressions {
         if let Expression::Struct {
             public,
@@ -42,7 +65,7 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
                 let debug_data = property_expr.debug_data();
                 let (name, struct_property) =
                     handle_struct_property(property_expr.clone(), size, &mut assembly_data)
-                        .with_context(|| format!("{debug_data:?}"))?;
+                        .with_context(|| format!("parse  struct declarations - {debug_data:?}"))?;
 
                 size += struct_property.data_type.size(&mut assembly_data)?;
                 struct_properties.insert(name, struct_property);
@@ -222,7 +245,7 @@ fn handle_expr(
                 condition,
                 inside,
                 debug_data,
-            } => todo!(),
+            } => handle_while_loop(*condition, inside, assembly_data),
         Expression::For {
                 iterator_name,
                 iteration_target,

@@ -1,4 +1,5 @@
 pub mod functions;
+pub mod loops;
 pub mod structs;
 
 use crate::{
@@ -74,7 +75,7 @@ pub fn handle_assignment(
     let data = if operator.value != "=" {
         let binary_operator = Token {
             kind: crate::lexer::tokens::TokenKind::Arrow, // whatever
-            value: operator.value.split_at(1).1.to_string(),
+            value: operator.value.split_at(1).0.to_string(),
             line: operator.line,
         };
 
@@ -218,6 +219,7 @@ pub fn handle_binary_expr(
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
+    output_code += &comment("handle_binary_expr");
 
     let debug_data = left.debug_data().to_owned();
     let output_left = handle_expr(left, assembly_data)?;
@@ -233,10 +235,10 @@ pub fn handle_binary_expr(
 
     let right_data = &output_right
         .data
-        .context("right expression desn't output any data")?;
+        .context("right expression doesn't output any data")?;
     let left_data = &output_left
         .data
-        .context("left expression desn't output any data")?;
+        .context("left expression doesn't output any data")?;
     if right_data.data_type != left_data.data_type {
         bail!(
             "right data type:{:?} != left data type {:?}, {:?}",
@@ -245,91 +247,87 @@ pub fn handle_binary_expr(
             debug_data
         );
     }
+    let (code_to_run, output_data_type) = match operator.value.as_str() {
+        "+" => (
+            &(add(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "-" => (
+            &(sub(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "*" => (
+            &(mul(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "/" => (
+            &(div(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "%" => (
+            &(modu(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        ">>" => (
+            &(shr(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "<<" => (
+            &(shl(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "&&" => (
+            &(and(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "||" => (
+            &(or(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
+        "^" => (
+            &(xor(a_register, b_register) + &cp(output_register, a_register)),
+            left_data.data_type.clone(),
+        ),
 
-    if left_data.size != 1 {
-        bail!(
-            "currently binary operations on data types that are bigger than 1 register (32 bits) are not supported! "
-        )
-    }
-    output_code += &left_data.read_register(a_register, 0, assembly_data)?;
-    output_code += &right_data.read_register(b_register, 0, assembly_data)?;
-    // add support for separate handles for different data types
-    let output_data_type: DataType = match operator.value.as_str() {
-        "+" => {
-            output_code += &(add(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "-" => {
-            output_code += &(sub(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "*" => {
-            output_code += &(mul(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "/" => {
-            output_code += &(div(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "%" => {
-            output_code += &(modu(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        ">>" => {
-            output_code += &(shr(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "<<" => {
-            output_code += &(shl(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "&&" => {
-            output_code += &(and(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "||" => {
-            output_code += &(or(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-        "^" => {
-            output_code += &(xor(a_register, b_register) + &cp(a_register, output_register));
-            left_data.data_type.clone()
-        }
-
-        "==" => {
-            output_code += &eq(a_register, b_register, output_register);
-            DataType::Bool
-        }
-        ">=" => {
-            output_code += &gte(a_register, b_register, output_register);
-            DataType::Bool
-        }
-        "<=" => {
-            output_code += &lte(a_register, b_register, output_register);
-            DataType::Bool
-        }
-        "<" => {
-            output_code += &lt(a_register, b_register, output_register);
-            DataType::Bool
-        }
-        ">" => {
-            output_code += &gt(a_register, b_register, output_register);
-            DataType::Bool
-        }
+        "==" => (&eq(a_register, b_register, output_register), DataType::Bool),
+        ">=" => (
+            &gte(a_register, b_register, output_register),
+            DataType::Bool,
+        ),
+        "<=" => (
+            &lte(a_register, b_register, output_register),
+            DataType::Bool,
+        ),
+        "<" => (&lt(a_register, b_register, output_register), DataType::Bool),
+        ">" => (&gt(a_register, b_register, output_register), DataType::Bool),
         other => bail!("binary operation: {other} wasn't handled"),
     };
     // allocate output on stack
-    let size = output_data_type.size(assembly_data)?;
-    let (code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
-    output_code += &code;
-    let output_data = Data {
-        stack_frame_offset: stack_frame_offset as i32,
-        size,
-        data_type: output_data_type,
+    let output_data = {
+        let size = output_data_type.size(assembly_data)?;
+        let (code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
+        output_code += &code;
+        Data {
+            stack_frame_offset: stack_frame_offset as i32,
+            size,
+            data_type: output_data_type,
+        }
     };
 
-    output_code += &output_data.write_register(output_register, 0, assembly_data)?;
+    output_code += &comment(&format!(
+        "handle_binary_expr - output_register- r{}",
+        output_register
+    ));
+    for i in 0..left_data.size {
+        output_code += &left_data.read_register(a_register, i, assembly_data)?;
+        output_code += &right_data.read_register(b_register, i, assembly_data)?;
+        // add support for separate handles for different data types
+        output_code += code_to_run;
 
+        output_code += &output_data.write_register(output_register, 0, assembly_data)?;
+    }
+
+    output_code += &comment("handle_binary_expr - end");
     assembly_data.mark_registers_free(&[a_register, b_register, output_register]);
     Ok(ExpressionOutput {
         code: output_code,

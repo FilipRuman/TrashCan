@@ -8,7 +8,7 @@ use log::info;
 
 use crate::{
     assembly_writer::{
-        assembly_instructions::{add, comment, set, write},
+        assembly_instructions::{add, comment, jmp_label, jmpc_label, label, not, set, write},
         data_structures::{
             AssemblyData, CodeBlockType, Data, DataType, ExpressionOutput, VariableCodeBlocks,
         },
@@ -18,6 +18,7 @@ use crate::{
     },
     parser::expression::Expression,
 };
+
 pub fn handle_struct_initialization(
     struct_type: Struct,
     assembly_data: &mut AssemblyData,
@@ -86,33 +87,6 @@ pub fn handle_struct_initialization(
             output_code += &handle_expr(assignment_expression.clone(), assembly_data)?.code;
 
             assembly_data.variable_code_blocks.pop_front();
-
-            // let value_expr_out = handle_expr(*value.to_owned(), assembly_data)?;
-            // output_code += &value_expr_out.code;
-            //
-            // let data = match value_expr_out.data {
-            //     Some(data) => {
-            //         if data.data_type != target_property_type.data_type {
-            //             bail!(
-            //                 "struct property nr. {i} initialization was not in the correct format. expected input data type: {:#?}, found data: {:#?}",
-            //                 target_property_type.data_type,
-            //                 data
-            //             )
-            //         }
-            //         data
-            //     }
-            //     None => {
-            //         bail!(
-            //             "struct property nr. {i} initialization was not in the correct format. expected input data type: {:#?}, found data: {:#?}",
-            //             target_property_type.data_type,
-            //             value_expr_out.data
-            //         )
-            //     }
-            // };
-            //
-            // for offset in  data.size{
-            // data.read_register(output_register, register_to_read_index, assembly_data)
-            // }
         } else {
             bail!(
                 "struct property nr. {i} initialization was not in the correct format. expected 'Expression::Assignment', found '{assignment_expression:#?}'"
