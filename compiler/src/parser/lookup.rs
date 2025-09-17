@@ -82,8 +82,8 @@ impl Lookup {
         lookup.led(TokenKind::NotEquals, 1, parse_assignment);
         lookup.led(TokenKind::PlusEquals, 1, parse_assignment);
         lookup.led(TokenKind::MinusEquals, 1, parse_assignment);
-        // lookup.led(TokenKind::StarEquals, 1, parse_assignment);
-        // lookup.led(TokenKind::SlashEquals, 1, parse_assignment);
+        lookup.led(TokenKind::StarEquals, 1, parse_assignment);
+        lookup.led(TokenKind::SlashEquals, 1, parse_assignment);
 
         lookup.led(TokenKind::Plus, 2, parse_binary_expr);
         lookup.led(TokenKind::Minus, 2, parse_binary_expr);

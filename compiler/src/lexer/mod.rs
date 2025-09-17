@@ -95,6 +95,8 @@ impl Lexer {
             Pattern::new(TokenKind::MinusMinus, "--"),
             Pattern::new(TokenKind::PlusEquals, "+="),
             Pattern::new(TokenKind::MinusEquals, "-="),
+            Pattern::new(TokenKind::StarEquals, "*="),
+            Pattern::new(TokenKind::SlashEquals, "/="),
             Pattern::new(TokenKind::Plus, "+"),
             Pattern::new(TokenKind::Minus, "-"),
             Pattern::new(TokenKind::Slash, "/"),

@@ -32,7 +32,8 @@ pub enum TokenKind {
     Comma,
     PlusEquals,
     MinusEquals,
-
+    StarEquals,
+    SlashEquals,
     PlusPlus,
     MinusMinus,
 
