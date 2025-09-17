@@ -353,8 +353,8 @@ fn handle_number_tokenization(lexer: &mut Lexer) {
         line: lexer.current_line,
     });
 }
-const NUMBER_BREAKERS: [&str; 16] = [
-    "\n", ";", " ", ",", "\t", ")", "(", "+", "/", "-", "*", "%", ">", "<", "]", "[",
+const NUMBER_BREAKERS: [&str; 18] = [
+    "\n", ";", " ", ",", "\t", ")", "(", "+", "/", "-", "*", "%", ">", "<", "]", "[", "{", "}",
 ];
 const NUMBERS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 fn is_number(char: &str) -> bool {
