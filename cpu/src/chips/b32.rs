@@ -160,7 +160,8 @@ impl B32 {
     #[inline(always)]
     pub fn negate(self) -> B32 {
         let mut out = self.clone();
-        out.set_bit(31, !self.bit(7));
+        out = out.not();
+        out += B32(1);
         out
     }
     pub fn abs(self) -> B32 {

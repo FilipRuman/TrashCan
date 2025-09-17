@@ -58,8 +58,7 @@ impl Sub for B32 {
     type Output = B32;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        rhs.negate();
-        let (sum, carry) = self.sum(rhs, false);
+        let (sum, carry) = self.sum(rhs.negate(), false);
 
         sum
     }
