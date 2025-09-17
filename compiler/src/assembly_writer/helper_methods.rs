@@ -48,7 +48,3 @@ pub fn validate_data_input_for_function(
 
     Ok(())
 }
-//
-// pub fn while_loop(condition_code: String, condition_registry: u8, contents: String) -> String {
-//     set(condition_registry, 1) + jmpc(address_registry, condition_registry)
-// }
