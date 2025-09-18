@@ -8,7 +8,7 @@ use expression_handler_functions::{
     handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
     handle_identifier, handle_if, handle_member_expression, handle_number,
     handle_open_square_brackets, handle_reference, handle_variable_declaration,
-    loops::handle_while_loop,
+    loops::{handle_for_loop, handle_while_loop},
     structs::data_types::{Struct, StructProperty},
 };
 use log::info;
@@ -251,7 +251,7 @@ fn handle_expr(
                 iteration_target,
                 inside,
                 debug_data,
-            } => todo!(),
+            } =>handle_for_loop(iterator_name,*iteration_target, inside, assembly_data),
         Expression::Range {
                 from,
                 to,

@@ -238,6 +238,7 @@ pub fn handle_function_call(
     let function_call_output = call_function_code(&data_input, function.to_owned(), assembly_data)?;
     output_code += &function_call_output.code;
 
+    assembly_data.current_var_name_for_function.clear();
     Ok(ExpressionOutput {
         code: output_code,
         data: function_call_output.data,
