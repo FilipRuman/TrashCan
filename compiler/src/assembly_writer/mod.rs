@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context, Result, bail};
 use assembly_instructions::halt;
@@ -9,7 +9,7 @@ use expression_handler_functions::{
     handle_identifier, handle_if, handle_member_expression, handle_number,
     handle_open_square_brackets, handle_reference, handle_variable_declaration,
     loops::{handle_for_loop, handle_while_loop},
-    structs::data_types::{Struct, StructProperty},
+    structs::data_types::{Struct, StructParsingState, StructProperty},
 };
 use log::info;
 
@@ -44,12 +44,14 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
                     size: 0,
                     name: name.to_owned(),
                     properties: HashMap::new(),
+                    contents_parsed: StructParsingState::Awaiting {
+                        properties: properties_expr.clone(),
+                    },
                 },
             );
         }
     }
-    // TODO: Solve properties with struct types recursively
-    // parse struct properties
+
     for expression in &expressions {
         if let Expression::Struct {
             public,
@@ -59,32 +61,21 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
             debug_data,
         } = expression
         {
-            let mut size = 0;
-            let mut struct_properties = HashMap::with_capacity(properties_expr.len());
-            for property_expr in properties_expr {
-                let debug_data = property_expr.debug_data();
-                let (name, struct_property) =
-                    handle_struct_property(property_expr.clone(), size, &mut assembly_data)
-                        .with_context(|| format!("parse  struct declarations - {debug_data:?}"))?;
-
-                size += struct_property.data_type.size(&mut assembly_data)?;
-                struct_properties.insert(name, struct_property);
+            let this_struct_type = assembly_data.find_struct(name)?;
+            if let StructParsingState::Done = this_struct_type.contents_parsed {
+                continue;
             }
-
-            assembly_data.structs.insert(
-                name.to_owned(),
-                Struct {
-                    size,
-                    name: name.to_owned(),
-                    properties: struct_properties,
-                },
-            );
+            let infinite_recursion_safety = &mut HashSet::new();
+            parse_struct_properties(
+                &mut assembly_data,
+                name.clone(),
+                properties_expr,
+                infinite_recursion_safety,
+            )?;
         }
     }
 
     parse_function_declarations(&expressions, &mut assembly_data)?;
-    // parse functions inside structs
-    //TODO:
 
     assembly_data.current_offset_from_stack_frame_base = 0;
     // parse rest
@@ -98,10 +89,50 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
     Ok(output)
 }
 
+fn parse_struct_properties(
+    assembly_data: &mut AssemblyData,
+    name_of_struct: String,
+    properties_expr: &Vec<Expression>,
+
+    infinite_recursion_safety: &mut HashSet<String>,
+) -> Result<(), anyhow::Error> {
+    if !infinite_recursion_safety.insert(name_of_struct.clone()) {
+        bail!(
+            "parsing struct properties caused infinite recursion!
+This happens when struct's properties reference other structs in a loop.
+Simplest way to fix it is to store references to structs instead of direct values.
+parsed struct names: {:?}",
+            infinite_recursion_safety
+        );
+    }
+    let mut size = 0;
+    let mut struct_properties = HashMap::with_capacity(properties_expr.len());
+    for property_expr in properties_expr {
+        let debug_data = property_expr.debug_data();
+        let (name, struct_property) = handle_struct_property(
+            property_expr.clone(),
+            size,
+            assembly_data,
+            infinite_recursion_safety,
+        )
+        .with_context(|| format!("parse  struct declarations - {debug_data:?}"))?;
+
+        size += struct_property.data_type.size(assembly_data)?;
+        struct_properties.insert(name, struct_property);
+    }
+
+    let struct_type = assembly_data.find_struct_mut_ref(&name_of_struct)?;
+    struct_type.size = size;
+    struct_type.properties = struct_properties;
+    struct_type.contents_parsed = StructParsingState::Done;
+    Ok(())
+}
+
 fn handle_struct_property(
     expr: Expression,
     offset_from_struct_base: u32,
     assembly_data: &mut AssemblyData,
+    infinite_recursion_safety: &mut HashSet<String>,
 ) -> Result<(String, StructProperty)> {
     if let Expression::StructProperty {
         var_name,
@@ -109,7 +140,19 @@ fn handle_struct_property(
         debug_data,
     } = expr
     {
-        let data_type = DataType::parse_type(var_type, assembly_data)?;
+        let data_type = DataType::parse_type(var_type, assembly_data)?.clone();
+        if let DataType::Struct { name: struct_name } = data_type.clone() {
+            let struct_type = assembly_data.find_struct(&struct_name)?.clone();
+            if let StructParsingState::Awaiting { properties } = struct_type.contents_parsed {
+                parse_struct_properties(
+                    assembly_data,
+                    struct_name,
+                    &properties.clone(),
+                    infinite_recursion_safety,
+                )?;
+            }
+        }
+
         Ok((
             var_name.to_owned(),
             StructProperty {
@@ -119,7 +162,7 @@ fn handle_struct_property(
         ))
     } else {
         bail!(
-            "handle_struct_property: expecetd inputted expression to be: 'Expression::StructProperty', found: {expr:?}"
+            "handle_struct_property: expected inputted expression to be: 'Expression::StructProperty', found: {expr:?}"
         )
     }
 }

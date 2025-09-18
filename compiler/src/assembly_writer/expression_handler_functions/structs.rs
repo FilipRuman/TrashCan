@@ -8,13 +8,12 @@ use log::info;
 
 use crate::{
     assembly_writer::{
-        assembly_instructions::{add, comment, jmp_label, jmpc_label, label, not, set, write},
+        assembly_instructions::{add, comment, set, write},
         data_structures::{
             AssemblyData, CodeBlockType, Data, DataType, ExpressionOutput, VariableCodeBlocks,
         },
-        expression_handler_functions::functions::handle_function_call,
         handle_expr,
-        helper_methods::{STACK_FRAME_POINTER, read_data_off_stack},
+        helper_methods::STACK_FRAME_POINTER,
     },
     parser::expression::Expression,
 };
@@ -60,7 +59,7 @@ pub fn handle_struct_initialization(
             } else {
                 bail!(
                 "struct property nr. {i} initialization was not in the correct format. expected target expression of assignment expression to be a
-'Expression::Identifier', found '{assignment_expression:#?}'"
+                'Expression::Identifier', found '{assignment_expression:#?}'"
             );
             };
 
@@ -75,6 +74,7 @@ pub fn handle_struct_initialization(
                     variables: HashMap::new(),
                     code_block_type: CodeBlockType::Exclusive,
                 });
+
             let property_data = Data {
                 stack_frame_offset: (alloc_base_stack_offset
                     + target_property_type.offset_from_struct_base)
@@ -82,6 +82,7 @@ pub fn handle_struct_initialization(
                 size: target_property_type.data_type.size(assembly_data)?,
                 data_type: target_property_type.data_type.clone(),
             };
+
             assembly_data.add_var(property_data, property_name)?;
 
             output_code += &handle_expr(assignment_expression.clone(), assembly_data)?.code;

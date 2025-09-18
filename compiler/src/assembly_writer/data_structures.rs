@@ -99,6 +99,13 @@ impl AssemblyData {
             bail!("struct with name: {name} was not found!")
         }
     }
+    pub fn find_struct_mut_ref(&mut self, name: &str) -> Result<&mut Struct> {
+        if let Some(struct_val) = self.structs.get_mut(name) {
+            Ok(struct_val)
+        } else {
+            bail!("struct with name: {name} was not found!")
+        }
+    }
     pub fn find_function(&self, name: &str) -> Result<&Function> {
         self.functions
             .get(name)
