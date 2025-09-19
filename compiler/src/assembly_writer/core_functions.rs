@@ -31,6 +31,7 @@ pub fn array_len(assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
         data: Some(data),
     })
 }
+
 pub fn print_raw(value: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let peripheral_registry = assembly_data.get_free_register()?;
     let serial_out_data_registry = assembly_data.get_free_register()?;

@@ -7,7 +7,7 @@ use expression_handler_functions::{
     functions::*,
     handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
     handle_identifier, handle_if, handle_member_expression, handle_number,
-    handle_open_square_brackets, handle_reference, handle_variable_declaration,
+    handle_open_square_brackets, handle_reference, handle_string, handle_variable_declaration,
     loops::{handle_for_loop, handle_while_loop},
     structs::data_types::{Struct, StructParsingState, StructProperty},
 };
@@ -27,8 +27,6 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
 
     info!("expressions: {expressions:#?}");
 
-    // INFO: I needed to split this so you can place other structs as properties inside
-    // parse  struct declarations
     for expression in &expressions {
         if let Expression::Struct {
             public,
@@ -188,7 +186,7 @@ fn handle_expr(
     match expression.clone() {
         Expression::Number(value, debug_data) => handle_number(value, assembly_data),
         Expression::Boolean(value, debug_data) => handle_bool(value, assembly_data),
-        Expression::String(_, debug_data) => todo!(),
+        Expression::String(value, debug_data) => handle_string(value, assembly_data),
         Expression::Identifier(name, debug_data) => {
                 handle_identifier(name, assembly_data, debug_data)
             }

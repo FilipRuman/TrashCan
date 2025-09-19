@@ -50,10 +50,12 @@ pub fn handle_while_loop(
     }
 
     output_code += &comment("while loop contents:");
+    assembly_data.current_var_name_for_function.clear();
 
     for inside_expr in inside {
         let inside_expr_out = handle_expr(inside_expr, assembly_data)?;
         output_code += &inside_expr_out.code;
+        assembly_data.current_var_name_for_function.clear();
     }
 
     output_code += &comment("while loop contents - end");
@@ -127,7 +129,9 @@ pub fn handle_for_loop(
                 .read_register(to_register, 0, assembly_data)?;
 
             // -1 because it's better to place iterator incrementation, in here not at the end
-            output_code += &(set(condition_register, 1) + &sub(iter_register, condition_register));
+            output_code += &(set(condition_register, 1)
+                + &sub(iter_register, condition_register)
+                + &sub(to_register, condition_register));
             output_code += &label(&for_start);
 
             output_code += &(set(condition_register, 1) + &add(iter_register, condition_register));
@@ -142,9 +146,12 @@ pub fn handle_for_loop(
 
     output_code += &comment("for loop contents:");
 
+    assembly_data.current_var_name_for_function.clear();
     for inside_expr in inside {
         let inside_expr_out = handle_expr(inside_expr, assembly_data)?;
         output_code += &inside_expr_out.code;
+
+        assembly_data.current_var_name_for_function.clear();
     }
 
     output_code += &comment("for loop contents - end");

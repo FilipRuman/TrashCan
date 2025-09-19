@@ -349,7 +349,40 @@ pub fn handle_identifier(
         data: Some(variable.to_owned()),
     })
 }
+pub fn handle_string(value: String, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    let mut chars = value.chars();
+    // remove "" from front
+    chars.next();
+    info!("chars: {chars:?}");
 
+    let mut output_code = String::new();
+    let register = assembly_data.get_free_register()?;
+
+    let size = chars.clone().count() as u32 + 1;
+    let data_type = DataType::Array {
+        inside: Box::new(DataType::Char),
+        length: size as i64 - 1,
+    };
+
+    let (alloc_code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
+    output_code += &alloc_code;
+
+    let data = Data {
+        stack_frame_offset: stack_frame_offset as i32,
+        size,
+        data_type,
+    };
+    output_code += &(set(register, size) + &data.write_register(register, 0, assembly_data)?);
+    for (i, char) in chars.enumerate() {
+        output_code += &(set(register, char as u32)
+            + &data.write_register(register, i as u32 + 1, assembly_data)?);
+    }
+
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
 pub fn handle_bool(value: bool, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
     let register = assembly_data.get_free_register()?;

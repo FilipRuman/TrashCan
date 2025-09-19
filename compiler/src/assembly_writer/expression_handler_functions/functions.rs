@@ -217,6 +217,8 @@ pub fn handle_function_call(
     {
         return Ok(out);
     }
+
+    assembly_data.current_var_name_for_function.clear();
     let mut output_code = String::new();
 
     let mut data_input: Vec<Data> = Vec::new();

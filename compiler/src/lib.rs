@@ -18,7 +18,6 @@ pub async fn compile(input_path: &str, output_path: &str) -> Result<()> {
     info!("tokens:  ------------ \n");
     let tokens = lexer::tokenize(
         String::from_utf8(content)?,
-
         vec![
             TokenKind::Tab,
             TokenKind::WhiteSpace,
@@ -43,6 +42,5 @@ pub async fn compile(input_path: &str, output_path: &str) -> Result<()> {
         .await
         .context("Couldn't find output file!")?;
 
-    info!("{output_code}");
     Ok(())
 }

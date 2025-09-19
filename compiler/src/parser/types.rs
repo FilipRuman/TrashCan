@@ -1,4 +1,4 @@
-use anyhow::*;
+use anyhow::{Context, Result, bail};
 use log::info;
 
 use crate::{
@@ -9,10 +9,7 @@ use crate::{
 pub enum Type {
     Symbol(String),
     Reference(Box<Type>),
-    Array {
-        left_type: Box<Type>,
-        dimensions: usize,
-    },
+    Array { left_type: Box<Type>, length: i64 },
 }
 pub fn parse_reference_type(parser: &mut Parser) -> Result<Type> {
     parser.expect(&TokenKind::Reference)?;
@@ -28,16 +25,19 @@ pub fn parse_symbol_type(parser: &mut Parser) -> Result<Type> {
 
 pub fn parse_array_type(parser: &mut Parser, bp: &i8, left: Type) -> Result<Type> {
     parser.expect(&TokenKind::OpenBracket)?;
-    let mut dimensions = 0;
-    while parser.current_token_kind()? == &TokenKind::Comma {
-        parser.advance()?;
-        dimensions += 1;
-    }
+    let token = parser.expect(&TokenKind::Number);
+
+    let length = if let Ok(token_t) = token {
+        token_t.value.parse::<i64>()?
+    } else {
+        parser.index -= 1;
+        -1
+    };
     parser.expect(&TokenKind::CloseBracket)?;
 
     Ok(Type::Array {
         left_type: Box::new(left),
-        dimensions,
+        length,
     })
 }
 pub fn parse_type(parser: &mut Parser, bp: &i8) -> Result<Type> {

@@ -34,7 +34,6 @@ impl Thread {
     pub fn Jmpc(&self, register_condition: B8, register_jump_target: B8, run: bool) {
         let condition = self.registers.read(register_condition).bit(0);
 
-        info!("Jmpc: {condition}, register {register_condition}");
         // store addr
         self.pc.write(
             true,

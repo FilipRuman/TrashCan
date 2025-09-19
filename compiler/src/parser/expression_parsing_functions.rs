@@ -340,6 +340,7 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         parser.expect(&TokenKind::Comma)?;
     }
 
+
     parser.expect(&TokenKind::CloseCurly)?;
 
     Ok(Expression::ArrayInitialization {

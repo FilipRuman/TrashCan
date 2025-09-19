@@ -1,6 +1,7 @@
 pub mod tokens;
 
 use anyhow::{Result, bail};
+use log::info;
 
 use crate::lexer::tokens::*;
 use core::str;
@@ -162,7 +163,7 @@ pub fn tokenize(source: String, black_list: Vec<TokenKind>) -> Result<Vec<Token>
             continue;
         }
         if at == "\"" || at == "$" {
-            handle_strings(&mut lexer);
+            handle_strings(&mut lexer)?;
             continue;
         }
         if is_symbol(at, true) {
@@ -212,7 +213,7 @@ fn handle_comments(lexer: &mut Lexer) {
         line: lexer.current_line,
     });
 }
-fn handle_strings(lexer: &mut Lexer) {
+fn handle_strings(lexer: &mut Lexer) -> Result<()> {
     let mut current_index = (lexer.pos + 1) as usize;
     let format_symbol = if &lexer.source[lexer.pos as usize] == "$" {
         current_index += 1;
@@ -223,22 +224,39 @@ fn handle_strings(lexer: &mut Lexer) {
 
     let mut value = format!("{format_symbol}\"");
 
+    let mut add_len_to_advance = 0;
     while current_index < lexer.source.len() {
         let char = &lexer.source[current_index];
         current_index += 1;
-        value += &char.to_string();
 
         if char == "\"" {
             break;
         }
+        if char == "\\" {
+            let char = &lexer.source[current_index];
+            current_index += 1;
+            add_len_to_advance += 1;
+            let escaped_string = &match char.as_str() {
+                "t" => '\t',
+                "n" => '\n',
+                other => bail!("escaping character '\\ + {other}' did not succeed!, current index: {current_index:?}"),
+            }
+            .to_string();
+            info!("escaped_string-> {escaped_string}");
+            value += escaped_string;
+            continue;
+        }
+
+        value += &char.to_string();
     }
 
-    lexer.advance(value.len() as u16);
+    lexer.advance(value.len() as u16 + add_len_to_advance + 1);
     lexer.push(Token {
         kind: TokenKind::String,
         value,
         line: lexer.current_line,
     });
+    Ok(())
 }
 fn handle_symbols(lexer: &mut Lexer, reserved_symbols: &HashMap<String, TokenKind>) {
     let mut value = String::new();
