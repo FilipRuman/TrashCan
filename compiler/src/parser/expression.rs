@@ -38,7 +38,7 @@ pub enum Expression {
     },
     // type name mutable
     VariableDeclaration {
-        var_type: Type,
+        var_type:Option< Type>,
         name: String,
         mutable: bool,
 

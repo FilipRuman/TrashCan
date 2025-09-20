@@ -4,10 +4,11 @@ use anyhow::{Context, Result, bail};
 use assembly_instructions::halt;
 use data_structures::*;
 use expression_handler_functions::{
+    assignment::handle_assignment,
     functions::*,
-    handle_array_initialization, handle_assignment, handle_binary_expr, handle_bool,
-    handle_identifier, handle_if, handle_member_expression, handle_number,
-    handle_open_square_brackets, handle_reference, handle_string, handle_variable_declaration,
+    handle_array_initialization, handle_binary_expr, handle_bool, handle_identifier, handle_if,
+    handle_member_expression, handle_number, handle_open_square_brackets, handle_reference,
+    handle_string, handle_variable_declaration,
     loops::{handle_for_loop, handle_while_loop},
     structs::data_types::{Struct, StructParsingState, StructProperty},
 };
@@ -215,7 +216,7 @@ fn handle_expr(
                 name,
                 mutable,
                 debug_data,
-            } => handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data),
+            } => /* handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data) */  bail!("this shouldn't be ever called. handle_assignment should have handled this "),
         Expression::Grouping(expression, debug_data) => handle_expr(*expression, assembly_data),
         Expression::Struct {
                 public,

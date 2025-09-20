@@ -9,7 +9,7 @@ use crate::{
 pub enum Type {
     Symbol(String),
     Reference(Box<Type>),
-    Array { left_type: Box<Type>, length: i64 },
+    Array { left_type: Box<Type> },
 }
 pub fn parse_reference_type(parser: &mut Parser) -> Result<Type> {
     parser.expect(&TokenKind::Reference)?;
@@ -37,7 +37,6 @@ pub fn parse_array_type(parser: &mut Parser, bp: &i8, left: Type) -> Result<Type
 
     Ok(Type::Array {
         left_type: Box::new(left),
-        length,
     })
 }
 pub fn parse_type(parser: &mut Parser, bp: &i8) -> Result<Type> {

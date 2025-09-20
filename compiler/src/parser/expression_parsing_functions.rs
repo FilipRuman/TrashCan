@@ -340,7 +340,6 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         parser.expect(&TokenKind::Comma)?;
     }
 
-
     parser.expect(&TokenKind::CloseCurly)?;
 
     Ok(Expression::ArrayInitialization {
@@ -385,14 +384,17 @@ pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
     }
 
     let name = (parser.expect(&TokenKind::Identifier)?.value).to_owned();
-    parser.expect(&TokenKind::Colon)?;
-
-    let var_type = parse_type(parser, &0).with_context(|| {
+    let var_type = if parser.current_token_kind()? == &TokenKind::Colon {
+        parser.expect(&TokenKind::Colon)?;
+        Some(parse_type(parser, &0).with_context(|| {
         format!(
             "parsing type for variable declaration, errors most of the time show that type specification: doesn't  exist / is invalid {:?} ",
             parser.get_current_debug_data()
         )
-    })?;
+    })?)
+    } else {
+        None
+    };
 
     debug_expression(&format!(
         "variable_declaration_expression: type{:?} mut:{} name:{} next_token_kind:{:?}",

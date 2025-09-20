@@ -129,6 +129,7 @@ impl AssemblyData {
         }
     }
     pub fn get_label_name(&mut self, type_name: &str) -> String {
+        self.current_label_id += 1;
         format!("{type_name}{}", self.current_label_id)
     }
 
@@ -532,10 +533,8 @@ impl DataType {
                     );
                 }
             },
-            crate::parser::types::Type::Array {
-                left_type,
-                dimensions,
-            } => DataType::Array {
+
+            crate::parser::types::Type::Array { left_type } => DataType::Array {
                 inside: Box::new(DataType::parse_type(*left_type, assembly_data)?),
             },
 

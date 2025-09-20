@@ -1,3 +1,4 @@
+pub mod assignment;
 pub mod functions;
 pub mod loops;
 pub mod structs;
@@ -58,85 +59,7 @@ pub fn handle_member_expression(
         data: right_expr_output.data,
     })
 }
-pub fn handle_assignment(
-    target: Expression,
-    operator: Token,
-    value: Expression,
-    assembly_data: &mut AssemblyData,
-) -> Result<ExpressionOutput> {
-    let mut output_code: String = String::new();
 
-    output_code += &comment("assignment");
-    let target_expr_out = handle_expr(target.clone(), assembly_data)?;
-    output_code += &target_expr_out.code;
-
-    assembly_data.current_var_name_for_function.clear();
-
-    let data = if operator.value != "=" {
-        let binary_operator = Token {
-            kind: crate::lexer::tokens::TokenKind::Arrow, // whatever
-            value: operator.value.split_at(1).0.to_string(),
-            line: operator.line,
-        };
-
-        let binary_expr_output =
-            handle_binary_expr(target.clone(), binary_operator, value, assembly_data)?;
-        output_code += &binary_expr_output.code;
-        binary_expr_output
-            .data
-            .context("binary expression doesn't output any data!")?
-    } else {
-        let value_expression_output = handle_expr(value, assembly_data)?;
-        output_code += &value_expression_output.code;
-        value_expression_output
-            .data
-            .context("value expression doesn't output any data!")?
-            .clone()
-    };
-
-    let target_data = target_expr_out
-        .data
-        .context("expected target expression to output data!")?;
-
-    if !data.data_type.eq(&target_data.data_type) {
-        return Err(anyhow!(
-            "expected: {:?} found: {:?} {:?}",
-            target_data.data_type,
-            data.data_type,
-            target.debug_data()
-        ));
-    }
-
-    output_code += &comment(&format!("assignment data: {data:?}"));
-    let read_registry = assembly_data.get_free_register()?;
-
-    output_code += &comment(&format!(
-        "assignment- variable.is_reference: {} data.is_reference: {} ",
-        target_data.is_reference(),
-        data.is_reference()
-    ));
-
-    if target_data.is_reference() && data.is_reference() {
-        output_code += &data.read_referenced_address(read_registry, assembly_data)?;
-        output_code +=
-            &target_data.write_to_last_reference_in_chain(read_registry, assembly_data)?;
-    } else {
-        for offset in 0..data.size {
-            output_code += &data.read_register(read_registry, offset, assembly_data)?;
-            output_code += &target_data.write_register(read_registry, offset, assembly_data)?;
-        }
-    }
-
-    assembly_data.current_var_name_for_function.clear();
-
-    output_code += &comment("end assignment");
-    assembly_data.mark_registers_free(&[read_registry]);
-
-    Ok(ExpressionOutput {
-        code: output_code,
-        data: None,
-    })
-}
 pub fn handle_reference(
     inside: Expression,
     assembly_data: &mut AssemblyData,
@@ -358,12 +281,11 @@ pub fn handle_string(value: String, assembly_data: &mut AssemblyData) -> Result<
     let mut output_code = String::new();
     let register = assembly_data.get_free_register()?;
 
-    let size = chars.clone().count() as u32 + 1;
     let data_type = DataType::Array {
         inside: Box::new(DataType::Char),
-        length: size as i64 - 1,
     };
 
+    let size = chars.clone().count() as u32 + 1;
     let (alloc_code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
     output_code += &alloc_code;
 
