@@ -294,7 +294,8 @@ pub fn handle_string(value: String, assembly_data: &mut AssemblyData) -> Result<
         size,
         data_type,
     };
-    output_code += &(set(register, size) + &data.write_register(register, 0, assembly_data)?);
+    output_code += &(set(register, chars.clone().count() as u32)
+        + &data.write_register(register, 0, assembly_data)?);
     for (i, char) in chars.enumerate() {
         output_code += &(set(register, char as u32)
             + &data.write_register(register, i as u32 + 1, assembly_data)?);
