@@ -74,7 +74,7 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
         }
     }
 
-    parse_function_declarations(&expressions, &mut assembly_data)?;
+    handle_function_declarations(&expressions, &mut assembly_data)?;
 
     assembly_data.current_offset_from_stack_frame_base = 0;
     // parse rest
@@ -245,7 +245,9 @@ fn handle_expr(
         Expression::ArrayInitialization {
                 properties,
                 debug_data,
-            } => handle_array_initialization(properties, assembly_data, debug_data),
+            length,
+            inside_type
+            } => handle_array_initialization(inside_type,length,properties, assembly_data, debug_data),
         Expression::Function {
                 name,
                 properties,

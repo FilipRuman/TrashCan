@@ -328,29 +328,22 @@ pub fn handle_bool(value: bool, assembly_data: &mut AssemblyData) -> Result<Expr
     })
 }
 pub fn handle_array_initialization(
+    inside_type: Type,
+    length: u32,
     properties: Vec<Expression>,
     assembly_data: &mut AssemblyData,
     debug_data: DebugData,
 ) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
     output_code += &comment("array_initialization");
-    let mut inside_data_type_size = 0;
 
     let data_copy_register = assembly_data.get_free_register()?;
 
-    let inside_data_type = if let DataType::Array { inside } = assembly_data
-        .find_var(&assembly_data.current_var_name_for_array_initialization)?
-        .data_type
-        .clone()
-    {
-        *inside
-    } else {
-        bail!("expected last variable to be an array!")
-    };
-    inside_data_type_size = inside_data_type.size(assembly_data)?;
+    let inside_data_type = DataType::parse_type(inside_type, assembly_data)?;
+    let inside_data_type_size = inside_data_type.size(assembly_data)?;
     // +1 -> 0'th index = len
-    let size = inside_data_type_size * properties.len() as u32 + 1;
-    let (allocation_code, mut stack_frame_offset) = assembly_data.allocate_stack(size)?;
+    let size = inside_data_type_size * length + 1;
+    let (allocation_code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
 
     output_code += &allocation_code;
     let output_data = Data {
@@ -363,7 +356,7 @@ pub fn handle_array_initialization(
 
     info!("handle_array_initialization- properties: {properties:?}");
     output_code += &comment(" write array length");
-    output_code += &(set(data_copy_register, properties.len() as u32)
+    output_code += &(set(data_copy_register, length as u32)
         + &output_data.write_register(data_copy_register, 0, assembly_data)?);
 
     for (i, property_expr) in properties.iter().enumerate() {

@@ -38,7 +38,7 @@ pub enum Expression {
     },
     // type name mutable
     VariableDeclaration {
-        var_type:Option< Type>,
+        var_type: Option<Type>,
         name: String,
         mutable: bool,
 
@@ -79,9 +79,10 @@ pub enum Expression {
         debug_data: DebugData,
     },
     ArrayInitialization {
+        length: u32,
         properties: Vec<Expression>,
-
         debug_data: DebugData,
+        inside_type: Type,
     },
     Function {
         name: String,
@@ -206,6 +207,8 @@ impl Expression {
             Expression::ArrayInitialization {
                 properties,
                 debug_data,
+                length,
+                inside_type,
             } => debug_data,
             Expression::Function {
                 name,
@@ -262,7 +265,7 @@ impl Expression {
                 values,
                 debug_data,
             } => debug_data,
-                       Expression::Reference(expression, debug_data) => debug_data,
+            Expression::Reference(expression, debug_data) => debug_data,
             Expression::Boolean(_, debug_data) => todo!(),
         }
     }

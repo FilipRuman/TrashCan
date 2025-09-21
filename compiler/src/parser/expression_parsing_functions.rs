@@ -1,5 +1,6 @@
 use crate::lexer::tokens::TokenKind;
 use anyhow::*;
+use log::info;
 
 use super::{Parser, expression::*, parse, types::parse_type};
 
@@ -331,20 +332,39 @@ pub fn parse_struct(parser: &mut Parser) -> Result<Expression> {
     })
 }
 pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
+    info!("parse_array_initialization");
     parser.expect(&TokenKind::OpenCurly)?;
+    let inside_type = parse_type(parser, &0)?;
+    parser.expect(&TokenKind::Comma)?;
+
     let mut properties = Vec::new();
+    let mut length = 0;
     while parser.current_token_kind()? != &TokenKind::EndOfFile
         && parser.current_token_kind()? != &TokenKind::CloseCurly
     {
+        if parser.current_token()?.value == "len" {
+            parser.advance()?;
+            parser.expect(&TokenKind::Colon)?;
+            length = parser.expect(&TokenKind::Number)?.value.parse::<u32>()?;
+            parser.expect(&TokenKind::Comma)?;
+            continue;
+        }
+
         properties.push(parse_expr(parser, &0)?);
         parser.expect(&TokenKind::Comma)?;
     }
 
     parser.expect(&TokenKind::CloseCurly)?;
 
+    if length == 0 {
+        length = properties.len() as u32;
+    }
+
     Ok(Expression::ArrayInitialization {
+        length,
         properties,
         debug_data: parser.get_current_debug_data()?,
+        inside_type
     })
 }
 pub fn parse_class_instantiation(
