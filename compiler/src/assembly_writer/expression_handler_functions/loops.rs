@@ -129,9 +129,7 @@ pub fn handle_for_loop(
                 .read_register(to_register, 0, assembly_data)?;
 
             // -1 because it's better to place iterator incrementation, in here not at the end
-            output_code += &(set(condition_register, 1)
-                + &sub(iter_register, condition_register)
-                + &sub(to_register, condition_register));
+            output_code += &(set(condition_register, 1) + &sub(iter_register, condition_register));
             output_code += &label(&for_start);
 
             output_code += &(set(condition_register, 1) + &add(iter_register, condition_register));
