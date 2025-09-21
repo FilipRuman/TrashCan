@@ -215,6 +215,7 @@ pub fn handle_function_call(
     if let Some(out) = handle_core_function_call(&name, &values, debug_data, assembly_data)
         .context("handle_core_function_call")?
     {
+        assembly_data.current_var_name_for_function.clear();
         return Ok(out);
     }
 
