@@ -364,7 +364,7 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         length,
         properties,
         debug_data: parser.get_current_debug_data()?,
-        inside_type
+        inside_type,
     })
 }
 pub fn parse_class_instantiation(
@@ -430,6 +430,16 @@ pub fn parse_variable_declaration(parser: &mut Parser) -> Result<Expression> {
         debug_data: parser.get_current_debug_data()?,
     })
 }
+pub fn parse_as(parser: &mut Parser, _: &i8, target: Expression) -> Result<Expression> {
+    parser.expect(&TokenKind::As);
+    let target_type = parse_type(parser, &0)?;
+    Ok(Expression::As(
+        Box::new(target),
+        target_type,
+        parser.get_current_debug_data()?,
+    ))
+}
+
 pub fn parse_assignment(parser: &mut Parser, _: &i8, target: Expression) -> Result<Expression> {
     debug_expression(&format!(
         "assignment_expr: target: {:?} current kind: {:?} ",

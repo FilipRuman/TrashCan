@@ -7,7 +7,7 @@ use super::{
     Parser,
     expression::{DebugData, Expression},
     expression_parsing_functions::{
-        parse_array_initialization, parse_assignment, parse_binary_expr, parse_bool_nod,
+        parse_array_initialization, parse_as, parse_assignment, parse_binary_expr, parse_bool_nod,
         parse_class_instantiation, parse_else, parse_for, parse_function, parse_function_call,
         parse_grouping, parse_identifier_nod, parse_if, parse_indexing_array, parse_keyword_nod,
         parse_member_expr, parse_number_nod, parse_prefix_nod, parse_range, parse_reference,
@@ -77,6 +77,7 @@ impl Lookup {
             nod_lu: HashMap::new(),
         };
 
+        lookup.led(TokenKind::As, 1, parse_as);
         lookup.led(TokenKind::Assignment, 1, parse_assignment);
         lookup.led(TokenKind::Equals, 1, parse_assignment);
         lookup.led(TokenKind::NotEquals, 1, parse_assignment);

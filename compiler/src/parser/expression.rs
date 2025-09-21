@@ -17,6 +17,7 @@ pub struct DebugData {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    As(Box<Expression>, Type, DebugData),
     Reference(Box<Expression>, DebugData),
     Boolean(bool, DebugData),
     Number(u32, DebugData),
@@ -266,7 +267,8 @@ impl Expression {
                 debug_data,
             } => debug_data,
             Expression::Reference(expression, debug_data) => debug_data,
-            Expression::Boolean(_, debug_data) => todo!(),
+            Expression::Boolean(_, debug_data) => debug_data,
+            Expression::As(expression, _, debug_data) => debug_data,
         }
     }
 }
