@@ -16,7 +16,7 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use data_types::Function;
 use log::*;
-pub fn parse_function_declarations(
+pub fn handle_function_declarations(
     expressions: &Vec<Expression>,
     assembly_data: &mut AssemblyData,
 ) -> Result<()> {
@@ -256,18 +256,25 @@ pub fn call_function_code(
 
     output_code += &comment("call_function_code");
 
+    // +1 for position to jump back to
     let needed_stack = if let Some(function_output) = function.output.to_owned() {
         // * -1 because the stack offset will be negative
-        -function_output.stack_frame_offset as u32
+        -function_output.stack_frame_offset as u32 + 1
     } else if !function.input.is_empty() {
+        output_code += &comment(&format!(
+            "function.input.is_empty(), {}, {}",
+            function.input.len() - 1,
+            -function.input[function.input.len() - 1].stack_frame_offset as u32 + 1
+        ));
         // * -1 because the stack offset will be negative
-        -function.input[function.input.len() - 1].stack_frame_offset as u32
+        -function.input[function.input.len() - 1].stack_frame_offset as u32 + 1
     } else {
-        // just for position to jump back to
         1
     };
 
-    info!("call_function_code - needed_stack: {needed_stack}");
+    output_code += &comment(&format!(
+        "call_function_code - needed_stack: {needed_stack}"
+    ));
     let offset_register = assembly_data.get_free_register()?;
 
     // the address to which i will add negative offsets
