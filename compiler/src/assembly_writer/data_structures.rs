@@ -113,6 +113,7 @@ impl AssemblyData {
     }
     pub fn new() -> Self {
         AssemblyData {
+            current_break_label_name: String::new(),
             current_var_name_for_function: String::new(),
             current_var_name_for_array_initialization: String::new(),
             // 0..=253-> STACK_BASE_POINTER: u8 = 254; && STACK_FRAME_POINTER: u8 = 255;
@@ -435,6 +436,7 @@ pub enum DataType {
     Char,
     Array {
         inside: Box<DataType>,
+        len: u32,
     },
     Struct {
         name: String,
@@ -450,9 +452,17 @@ pub enum DataType {
 impl PartialEq for DataType {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Array { inside: l_inside }, Self::Array { inside: r_inside }) => {
-                l_inside == r_inside
-            }
+            (
+                Self::Array {
+                    inside: l_inside,
+                    len: l_len,
+                },
+                Self::Array {
+                    inside: r_inside,
+                    len: r_len,
+                },
+            ) => (l_inside == r_inside) && (l_len == r_len),
+
             (Self::Struct { name: l_name }, Self::Struct { name: r_name }) => l_name == r_name,
             (
                 Self::Reference {
@@ -502,7 +512,7 @@ impl DataType {
             DataType::U8 => "U8".to_string(),
             DataType::Bool => "Bool".to_string(),
             DataType::Char => "Char".to_string(),
-            DataType::Array { inside: _ } => "[]".to_string(),
+            DataType::Array { inside: _, len: _ } => "[]".to_string(),
             DataType::Struct { name } => name.to_string(),
             DataType::Reference {
                 inside,
@@ -534,8 +544,9 @@ impl DataType {
                 }
             },
 
-            crate::parser::types::Type::Array { left_type } => DataType::Array {
+            crate::parser::types::Type::Array { left_type, len } => DataType::Array {
                 inside: Box::new(DataType::parse_type(*left_type, assembly_data)?),
+                len,
             },
 
             crate::parser::types::Type::Reference(inside) => DataType::Reference {
@@ -554,7 +565,9 @@ impl DataType {
             DataType::U8 => 1, //TODO: add support for 8 bit size variables
             DataType::Bool => 1,
             DataType::Char => 1,
-            DataType::Array { inside } => inside.size(assembly_data).context("DataType::size()")?,
+            DataType::Array { inside, len } => {
+                inside.size(assembly_data).context("DataType::size()")? * len
+            }
             DataType::Struct { name } => assembly_data.find_struct(name)?.size,
         })
     }

@@ -318,11 +318,12 @@ pub fn handle_string(value: String, assembly_data: &mut AssemblyData) -> Result<
     let mut output_code = String::new();
     let register = assembly_data.get_free_register()?;
 
+    let size = chars.clone().count() as u32 + 1;
     let data_type = DataType::Array {
         inside: Box::new(DataType::Char),
+        len: chars.clone().count() as u32,
     };
 
-    let size = chars.clone().count() as u32 + 1;
     let (alloc_code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
     output_code += &alloc_code;
 
@@ -389,8 +390,14 @@ pub fn handle_array_initialization(
         size,
         data_type: DataType::Array {
             inside: Box::new(inside_data_type.clone()),
+            len: length,
         },
     };
+    // clear all data
+    output_code += &set(data_copy_register, 0);
+    for i in 0..output_data.size {
+        output_code += &output_data.write_register(data_copy_register, i, assembly_data)?;
+    }
 
     info!("handle_array_initialization- properties: {properties:?}");
     output_code += &comment(" write array length");
@@ -443,7 +450,7 @@ pub fn handle_array_indexing(
     output_code += &comment("index_array");
     output_code += &comment(&format!("index_array - var:{var_to_index:?}"));
     let data_type =
-        if let DataType::Array { inside } = var_to_index.data_type.unwrap_from_references() {
+        if let DataType::Array { inside, len } = var_to_index.data_type.unwrap_from_references() {
             *inside
         } else {
             bail!("you can only index array variables!");
@@ -549,6 +556,7 @@ pub fn handle_open_square_brackets(
         )
     }
 }
+
 pub fn handle_number(value: u32, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
     let register = assembly_data.get_free_register()?;

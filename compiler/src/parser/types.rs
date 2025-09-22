@@ -9,7 +9,7 @@ use crate::{
 pub enum Type {
     Symbol(String),
     Reference(Box<Type>),
-    Array { left_type: Box<Type> },
+    Array { left_type: Box<Type>, len: u32 },
 }
 pub fn parse_reference_type(parser: &mut Parser) -> Result<Type> {
     parser.expect(&TokenKind::Reference)?;
@@ -25,18 +25,12 @@ pub fn parse_symbol_type(parser: &mut Parser) -> Result<Type> {
 
 pub fn parse_array_type(parser: &mut Parser, bp: &i8, left: Type) -> Result<Type> {
     parser.expect(&TokenKind::OpenBracket)?;
-    let token = parser.expect(&TokenKind::Number);
-
-    let length = if let Ok(token_t) = token {
-        token_t.value.parse::<i64>()?
-    } else {
-        parser.index -= 1;
-        -1
-    };
+    let len = parser.expect(&TokenKind::Number)?.value.parse::<u32>()?;
     parser.expect(&TokenKind::CloseBracket)?;
 
     Ok(Type::Array {
         left_type: Box::new(left),
+        len,
     })
 }
 pub fn parse_type(parser: &mut Parser, bp: &i8) -> Result<Type> {
