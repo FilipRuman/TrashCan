@@ -25,7 +25,11 @@ pub fn parse_symbol_type(parser: &mut Parser) -> Result<Type> {
 
 pub fn parse_array_type(parser: &mut Parser, bp: &i8, left: Type) -> Result<Type> {
     parser.expect(&TokenKind::OpenBracket)?;
-    let len = parser.expect(&TokenKind::Number)?.value.parse::<u32>()?;
+    let len = if parser.current_token_kind()? == &TokenKind::Number {
+        parser.expect(&TokenKind::Number)?.value.parse::<u32>()?
+    } else {
+        0
+    };
     parser.expect(&TokenKind::CloseBracket)?;
 
     Ok(Type::Array {
