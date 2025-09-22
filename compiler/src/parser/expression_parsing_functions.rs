@@ -60,6 +60,10 @@ pub fn parse_else(parser: &mut Parser) -> Result<Expression> {
     }
 }
 
+pub fn parse_break(parser: &mut Parser) -> Result<Expression> {
+    parser.expect(&TokenKind::Break)?;
+    Ok(Expression::Break)
+}
 pub fn parse_function_call(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::OpenParen)?;
     let mut values = Vec::new();

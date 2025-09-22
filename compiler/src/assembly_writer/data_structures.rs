@@ -22,6 +22,7 @@ pub struct AssemblyData {
     pub structs: HashMap<String, Struct>,
     pub functions: HashMap<String, Function>,
     pub current_offset_from_stack_frame_base: u32,
+    pub current_break_label_name: String,
 
     /// INFO: the difference is that the one for array initialization is never cleared. this is needed
     /// because you initialize array after assignment, so you need to lookup variable before

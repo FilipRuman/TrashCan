@@ -9,7 +9,7 @@ use expression_handler_functions::{
     handle_array_initialization, handle_as, handle_binary_expr, handle_bool, handle_identifier,
     handle_if, handle_member_expression, handle_number, handle_open_square_brackets,
     handle_reference, handle_string, handle_variable_declaration,
-    loops::{handle_for_loop, handle_while_loop},
+    loops::{handle_break, handle_for_loop, handle_while_loop},
     structs::data_types::{Struct, StructParsingState, StructProperty},
 };
 use log::info;
@@ -185,6 +185,7 @@ fn handle_expr(
 ) -> Result<ExpressionOutput> {
     info!("handle_expr - {expression:?}");
     match expression.clone() {
+        Expression::Break =>  handle_break(assembly_data),
         Expression::Number(value, debug_data) => handle_number(value, assembly_data),
         Expression::Boolean(value, debug_data) => handle_bool(value, assembly_data),
         Expression::String(value, debug_data) => handle_string(value, assembly_data),

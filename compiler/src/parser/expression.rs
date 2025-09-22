@@ -20,6 +20,7 @@ pub enum Expression {
     As(Box<Expression>, Type, DebugData),
     Reference(Box<Expression>, DebugData),
     Boolean(bool, DebugData),
+
     Number(u32, DebugData),
     String(String, DebugData),
     Identifier(String, DebugData),
@@ -106,6 +107,7 @@ pub enum Expression {
 
         debug_data: DebugData,
     },
+    Break,
     Return {
         value: Box<Expression>,
 
@@ -158,6 +160,7 @@ impl Expression {
     #[allow(unused_variables)]
     pub fn debug_data(&self) -> &DebugData {
         match self {
+            Expression::Break => todo!(),
             Expression::Number(_, debug_data) => debug_data,
             Self::Boolean(_, debug_data) => debug_data,
             Expression::String(_, debug_data) => debug_data,

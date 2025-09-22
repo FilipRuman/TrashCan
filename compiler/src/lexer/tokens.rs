@@ -11,6 +11,7 @@ pub enum TokenKind {
     CloseParen,
     OpenParen,
     Inst,
+    Break,
 
     DotDot,
     Dot,
@@ -59,7 +60,6 @@ pub enum TokenKind {
     Enum,
     Struct,
     Pub,
-    Mod,
     As,
     New,
     Import,

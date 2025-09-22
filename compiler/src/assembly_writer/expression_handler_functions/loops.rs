@@ -13,17 +13,34 @@ use crate::{
     parser::expression::Expression,
 };
 use anyhow::{Context, Result, bail};
-
+pub fn handle_break(assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    if assembly_data.current_break_label_name.is_empty() {
+        bail!(
+            "current break label name is empty! this happens when you call break expression out of any loops scope"
+        );
+    }
+    let label_addr_conversion_register = assembly_data.get_free_register()?;
+    assembly_data.mark_registers_free(&[label_addr_conversion_register]);
+    Ok(ExpressionOutput {
+        code: jmp_label(
+            &assembly_data.current_break_label_name,
+            label_addr_conversion_register,
+        ),
+        data: None,
+    })
+}
 pub fn handle_while_loop(
     condition: Expression,
     inside: Vec<Expression>,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
+    let previous_break_label_name = assembly_data.current_break_label_name.clone();
     let mut output_code = String::new();
     let while_start = assembly_data.get_label_name("while_start");
     let while_end = assembly_data.get_label_name("while_end");
     let condition_register = assembly_data.get_free_register()?;
     let label_addr_conversion_register = assembly_data.get_free_register()?;
+    assembly_data.current_break_label_name = while_end.clone();
     assembly_data
         .variable_code_blocks
         .push_front(VariableCodeBlocks {
@@ -64,6 +81,7 @@ pub fn handle_while_loop(
     output_code += &label(&while_end);
 
     assembly_data.variable_code_blocks.pop_front();
+    assembly_data.current_break_label_name = previous_break_label_name;
 
     assembly_data.mark_registers_free(&[condition_register, label_addr_conversion_register]);
     Ok(ExpressionOutput {
@@ -80,6 +98,10 @@ pub fn handle_for_loop(
     let mut output_code = String::new();
     let for_start = assembly_data.get_label_name("for_start");
     let for_end = assembly_data.get_label_name("for_end");
+
+    let previous_break_label_name = assembly_data.current_break_label_name.clone();
+    assembly_data.current_break_label_name = for_end.clone();
+
     let condition_register = assembly_data.get_free_register()?;
     let iter_register = assembly_data.get_free_register()?;
     let label_addr_conversion_register = assembly_data.get_free_register()?;
@@ -148,7 +170,6 @@ pub fn handle_for_loop(
     for inside_expr in inside {
         let inside_expr_out = handle_expr(inside_expr, assembly_data)?;
         output_code += &inside_expr_out.code;
-
         assembly_data.current_var_name_for_function.clear();
     }
 
@@ -158,6 +179,7 @@ pub fn handle_for_loop(
     output_code += &label(&for_end);
 
     assembly_data.variable_code_blocks.pop_front();
+    assembly_data.current_break_label_name = previous_break_label_name;
     assembly_data.mark_registers_free(&[
         condition_register,
         label_addr_conversion_register,
