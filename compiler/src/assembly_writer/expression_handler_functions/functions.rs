@@ -47,12 +47,11 @@ pub fn handle_function_declarations(
 
                 let data_type = DataType::parse_type(input_type, assembly_data)?;
 
-                let offset = current_stack_offset;
                 current_stack_offset -= data_type.size(assembly_data)? as i32;
                 input.push(FunctionInputData {
                     name: var_name.to_owned(),
                     data_type,
-                    stack_frame_offset: offset,
+                    stack_frame_offset: current_stack_offset,
                 });
             }
             let output_data: Option<FunctionInputData> = {
@@ -63,6 +62,8 @@ pub fn handle_function_declarations(
                         output_type.as_ref().unwrap().to_owned(),
                         assembly_data,
                     )?;
+
+                    current_stack_offset -= data_type.size(assembly_data)? as i32;
                     Some(FunctionInputData {
                         name: name.to_owned(),
                         data_type,
