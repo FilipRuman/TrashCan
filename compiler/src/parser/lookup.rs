@@ -14,7 +14,6 @@ use super::{
         parse_reference, parse_return, parse_string_nod, parse_struct, parse_variable_declaration,
         parse_while,
     },
-    types::parse_reference_type,
 };
 
 type LedFunctionType = fn(&mut Parser, &i8, Expression) -> Result<Expression>;

@@ -1,9 +1,9 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use log::info;
 
 use crate::{
     lexer::tokens::TokenKind,
-    parser::{self, Parser},
+    parser::Parser,
 };
 #[derive(Clone, Debug)]
 pub enum Type {

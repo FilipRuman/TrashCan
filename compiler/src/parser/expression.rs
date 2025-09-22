@@ -1,14 +1,8 @@
-use anyhow::{Result, anyhow, bail};
-use core::panic;
 
-use anyhow::Context;
 
 use crate::lexer::tokens::{Token, TokenKind};
 
-use super::{
-    Parser,
-    types::{Type, parse_type},
-};
+use super::types::Type;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DebugData {

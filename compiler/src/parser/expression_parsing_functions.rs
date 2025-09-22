@@ -2,7 +2,7 @@ use crate::lexer::tokens::TokenKind;
 use anyhow::*;
 use log::info;
 
-use super::{Parser, expression::*, parse, types::parse_type};
+use super::{Parser, expression::*, types::parse_type};
 
 pub fn parse_indexing_array(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::OpenBracket)?;
@@ -295,7 +295,7 @@ pub fn parse_struct(parser: &mut Parser) -> Result<Expression> {
     parser.expect(&TokenKind::OpenCurly)?;
 
     let mut properties = Vec::new();
-    let mut functions = Vec::new();
+    let functions = Vec::new();
     while parser.current_token_kind()? != &TokenKind::EndOfFile
         && parser.current_token_kind()? != &TokenKind::CloseCurly
     {

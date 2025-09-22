@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     assembly_writer::{
         assembly_instructions::{
-            add, comment, gte, jmp_label, jmpc_label, label, lt, not, set, sub,
+            add, comment, gte, jmp_label, jmpc_label, label, not, set, sub,
         },
         data_structures::{
             AssemblyData, CodeBlockType, Data, DataType, ExpressionOutput, VariableCodeBlocks,

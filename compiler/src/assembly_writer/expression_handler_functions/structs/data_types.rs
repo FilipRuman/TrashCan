@@ -1,12 +1,4 @@
-use crate::{
-    assembly_writer::{
-        assembly_instructions::set,
-        data_structures::{AssemblyData, Data, DataType, ExpressionOutput},
-        helper_methods::write_data_to_stack,
-    },
-    parser::expression::{DebugData, Expression},
-};
-use anyhow::{Context, Result, bail};
+use crate::{assembly_writer::data_structures::DataType, parser::expression::Expression};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]

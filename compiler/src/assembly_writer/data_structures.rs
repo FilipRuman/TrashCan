@@ -1,13 +1,8 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    env::Vars,
-    fmt::format,
-};
+use std::collections::{HashMap, VecDeque};
 
 use anyhow::*;
 use log::info;
 
-use crate::parser::expression::DebugData;
 
 use super::{
     assembly_instructions::*,

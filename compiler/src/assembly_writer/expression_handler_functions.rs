@@ -10,7 +10,7 @@ use crate::{
         types::Type,
     },
 };
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, bail};
 use structs::{handle_struct_access, handle_struct_initialization};
 
 use super::{assembly_instructions::*, helper_methods::STACK_FRAME_POINTER, *};

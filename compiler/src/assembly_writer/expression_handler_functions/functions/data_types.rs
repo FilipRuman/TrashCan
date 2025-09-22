@@ -1,5 +1,4 @@
-use anyhow::{Context, Result, bail};
-use log::*;
+use anyhow::Result;
 
 use crate::assembly_writer::{
     assembly_instructions::{add, set},
