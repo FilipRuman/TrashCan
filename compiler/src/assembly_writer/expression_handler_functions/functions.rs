@@ -19,6 +19,55 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use data_types::Function;
 use log::*;
+pub fn handle_return(
+    value: Expression,
+    assembly_data: &mut AssemblyData,
+    debug_data: DebugData,
+) -> Result<ExpressionOutput> {
+    let function_data = assembly_data
+        .current_function_data_for_return
+        .clone()
+        .context("")?;
+    let function = assembly_data.find_function(&function_data.name)?.clone();
+
+    let mut output_code = String::new();
+    output_code += &comment("Return");
+    let expr_output = handle_expr(value, assembly_data)?;
+    output_code += &expr_output.code;
+    verify_function_output_with_return(function.output.to_owned(), expr_output.data.to_owned())
+        .with_context(|| format!("{debug_data:?}"))?;
+
+    // write to output variables on stack
+    if let Some(target_output) = function.output.to_owned() {
+        output_code += &target_output.assign(&expr_output.data.unwrap(), assembly_data)?;
+    }
+
+    let jump_back_addr_register = assembly_data.get_free_register()?;
+    output_code += &cp(jump_back_addr_register, STACK_FRAME_POINTER);
+
+    // deallocate all variables used in this function from stack
+    output_code += &cp(STACK_HEAD_POINTER, STACK_FRAME_POINTER);
+
+    // go back to stack frame of parent function
+    //
+    let initial_stack_frame_register = assembly_data.get_free_register()?;
+    output_code += &function_data.initial_stack_frame_data.read_register(
+        initial_stack_frame_register,
+        0,
+        assembly_data,
+    )?;
+
+    output_code += &cp(STACK_FRAME_POINTER, initial_stack_frame_register);
+
+    // read return addr + jmp to it
+    output_code +=
+        &(read(jump_back_addr_register, jump_back_addr_register) + &jmp(jump_back_addr_register));
+    assembly_data.mark_registers_free(&[jump_back_addr_register, initial_stack_frame_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
+}
 pub fn handle_function_declarations(
     expressions: &Vec<Expression>,
     assembly_data: &mut AssemblyData,
@@ -132,8 +181,6 @@ pub fn handle_function(
     let mut output_code = String::new();
     output_code += &label(&function.label_name);
 
-    let jump_back_addr_register = assembly_data.get_free_register()?;
-
     let initial_stack_frame_register = assembly_data.get_free_register()?;
 
     output_code += &cp(initial_stack_frame_register, STACK_FRAME_POINTER);
@@ -173,48 +220,16 @@ pub fn handle_function(
     //
     //
 
+    let previous_function_data = assembly_data.current_function_data_for_return.clone();
+    assembly_data.current_function_data_for_return = Some(FunctionDataForReturn {
+        name: name.clone(),
+        initial_stack_frame_data: initial_stack_frame_data.clone(),
+    });
     for expression in inside {
-        match expression {
-            Expression::Return { value, debug_data } => {
-                output_code += &comment("Return");
-                let expr_output = handle_expr(*value, assembly_data)?;
-                output_code += &expr_output.code;
-                verify_function_output_with_return(
-                    function.output.to_owned(),
-                    expr_output.data.to_owned(),
-                )
-                .with_context(|| format!("{debug_data:?}"))?;
-
-                // write to output variables on stack
-                if let Some(target_output) = function.output.to_owned() {
-                    output_code +=
-                        &target_output.assign(&expr_output.data.unwrap(), assembly_data)?;
-                }
-
-                output_code += &cp(jump_back_addr_register, STACK_FRAME_POINTER);
-
-                // deallocate all variables used in this function from stack
-                output_code += &cp(STACK_HEAD_POINTER, STACK_FRAME_POINTER);
-
-                // go back to stack frame of parent function
-                output_code += &initial_stack_frame_data.read_register(
-                    initial_stack_frame_register,
-                    0,
-                    assembly_data,
-                )?;
-
-                output_code += &cp(STACK_FRAME_POINTER, initial_stack_frame_register);
-
-                // read return addr + jmp to it
-                output_code += &(read(jump_back_addr_register, jump_back_addr_register)
-                    + &jmp(jump_back_addr_register));
-            }
-            other => {
-                output_code += &handle_expr(other, assembly_data)?.code;
-            }
-        }
+        output_code += &handle_expr(expression, assembly_data)?.code;
     }
-    assembly_data.mark_registers_free(&[initial_stack_frame_register, jump_back_addr_register]);
+    assembly_data.current_function_data_for_return = previous_function_data;
+    assembly_data.mark_registers_free(&[initial_stack_frame_register]);
     assembly_data.variable_code_blocks.pop_front();
 
     Ok(ExpressionOutput {

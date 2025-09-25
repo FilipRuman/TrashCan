@@ -25,6 +25,7 @@ pub struct AssemblyData {
     pub functions: HashMap<String, Function>,
     pub current_offset_from_stack_frame_base: u32,
     pub current_break_label_name: String,
+    pub current_function_data_for_return: Option<FunctionDataForReturn>,
 
     /// INFO: the difference is that the one for array initialization is never cleared. this is needed
     /// because you initialize array after assignment, so you need to lookup variable before
@@ -38,6 +39,12 @@ pub struct AssemblyData {
     /// and the one for functions needs to be cleared because it could cause problems if you call
     /// function after assignment. eg. num = random_number();
     pub current_var_name_for_array_initialization: String,
+}
+
+#[derive(Clone)]
+pub struct FunctionDataForReturn {
+    pub name: String,
+    pub initial_stack_frame_data: Data,
 }
 pub struct VariableCodeBlocks {
     pub variables: HashMap<String, Data>,
@@ -134,6 +141,7 @@ impl AssemblyData {
             structs: HashMap::new(),
             functions: HashMap::new(),
             current_offset_from_stack_frame_base: 0,
+            current_function_data_for_return: None,
         }
     }
     pub fn get_label_name(&mut self, type_name: &str) -> String {

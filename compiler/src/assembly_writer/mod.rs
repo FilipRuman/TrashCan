@@ -270,7 +270,7 @@ fn handle_expr(
                     debug_data,
                 } => handle_member_expression(*left,
                     *right,assembly_data),
-        Expression::Return { value, debug_data } => todo!(),
+        Expression::Return { value, debug_data } =>handle_return(*value,assembly_data,debug_data),
         Expression::If {
                     condition,
                     inside,
