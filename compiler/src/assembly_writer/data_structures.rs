@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use anyhow::*;
 use log::info;
 
+use crate::parser::expression::Expression;
 
 use super::{
     assembly_instructions::*,
@@ -10,9 +11,15 @@ use super::{
     helper_methods::*,
 };
 
+#[derive(Clone)]
+pub struct StaticVariable {
+    pub data_type: DataType,
+    pub label: String,
+}
 pub struct AssemblyData {
     pub free_registries: VecDeque<u8>,
     pub variable_code_blocks: VecDeque<VariableCodeBlocks>,
+    pub static_variables: HashMap<String, StaticVariable>,
     pub current_label_id: u32,
     pub structs: HashMap<String, Struct>,
     pub functions: HashMap<String, Function>,
@@ -102,6 +109,9 @@ impl AssemblyData {
             bail!("struct with name: {name} was not found!")
         }
     }
+
+    pub fn get_static_variable() {}
+
     pub fn find_function(&self, name: &str) -> Result<&Function> {
         self.functions
             .get(name)
@@ -109,6 +119,7 @@ impl AssemblyData {
     }
     pub fn new() -> Self {
         AssemblyData {
+            static_variables: HashMap::new(),
             current_break_label_name: String::new(),
             current_var_name_for_function: String::new(),
             current_var_name_for_array_initialization: String::new(),

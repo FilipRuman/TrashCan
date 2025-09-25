@@ -1,6 +1,9 @@
 pub mod data_types;
 
-use crate::assembly_writer::data_types::FunctionInputData;
+use crate::assembly_writer::{
+    core_functions::{access_static_variable, create_static_variable, malloc, memory_access},
+    data_types::FunctionInputData,
+};
 use std::collections::HashMap;
 
 use crate::{
@@ -129,12 +132,22 @@ pub fn handle_function(
     let mut output_code = String::new();
     output_code += &label(&function.label_name);
 
-    let initial_stack_frame_register = assembly_data.get_free_register()?;
     let jump_back_addr_register = assembly_data.get_free_register()?;
 
-    output_code += &cp(initial_stack_frame_register, STACK_FRAME_POINTER);
+    let initial_stack_frame_register = assembly_data.get_free_register()?;
 
+    output_code += &cp(initial_stack_frame_register, STACK_FRAME_POINTER);
     output_code += &cp(STACK_FRAME_POINTER, STACK_HEAD_POINTER);
+
+    let initial_stack_frame_alloc = assembly_data.allocate_stack(1)?;
+    output_code += &initial_stack_frame_alloc.0;
+    let initial_stack_frame_data = Data {
+        stack_frame_offset: initial_stack_frame_alloc.1 as i32,
+        size: 1,
+        data_type: DataType::U32,
+    };
+    output_code +=
+        &initial_stack_frame_data.write_register(initial_stack_frame_register, 0, assembly_data)?;
 
     assembly_data
         .variable_code_blocks
@@ -184,6 +197,12 @@ pub fn handle_function(
                 output_code += &cp(STACK_HEAD_POINTER, STACK_FRAME_POINTER);
 
                 // go back to stack frame of parent function
+                output_code += &initial_stack_frame_data.read_register(
+                    initial_stack_frame_register,
+                    0,
+                    assembly_data,
+                )?;
+
                 output_code += &cp(STACK_FRAME_POINTER, initial_stack_frame_register);
 
                 // read return addr + jmp to it
@@ -413,6 +432,31 @@ pub fn handle_core_function_call(
             expect_input_len(values, 1).context("print_raw")?;
 
             Ok(Some(print_raw(values[0].to_owned(), assembly_data)?))
+        }
+        "mem" => {
+            expect_input_len(values, 1).context("mem")?;
+
+            Ok(Some(memory_access(values[0].to_owned(), assembly_data)?))
+        }
+        "malloc" => {
+            expect_input_len(values, 1).context("malloc")?;
+
+            Ok(Some(malloc(values[0].to_owned(), assembly_data)?))
+        }
+        "access_static" => {
+            expect_input_len(values, 1).context("statics")?;
+            Ok(Some(access_static_variable(
+                values[0].to_owned(),
+                assembly_data,
+            )?))
+        }
+        "create_static" => {
+            expect_input_len(values, 2).context("create_static")?;
+            Ok(Some(create_static_variable(
+                values[0].to_owned(),
+                values[1].to_owned(),
+                assembly_data,
+            )?))
         }
         "[].len" => {
             expect_input_len(values, 0).context("array_len")?;

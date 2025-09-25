@@ -1,5 +1,4 @@
-
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use lexer::tokens;
 use log::info;
 use tokens::TokenKind;

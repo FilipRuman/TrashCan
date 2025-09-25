@@ -1,4 +1,6 @@
-use super::data_structures::Data;
+use super::assembly_instructions::{comment, jmp, jmp_label, label, set_label, write};
+use super::data_structures::{Data, StaticVariable};
+use super::expression_handler_functions::functions::{call_function_code, handle_function_call};
 use super::{
     AssemblyData, ExpressionOutput,
     assembly_instructions::{self, phrp, set},
@@ -7,6 +9,240 @@ use super::{
 use crate::{assembly_writer::data_structures::DataType, parser::expression::Expression};
 use anyhow::*;
 
+pub fn malloc(
+    input_expression: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    output_code += &comment("malloc");
+    let alloc_function = assembly_data
+        .find_function("core_allocate")
+        .context("to use malloc you need to decleare 'core_allocate' fucntion")?
+        .clone();
+
+    output_code += &comment("malloc- input expr");
+    let input_expr_out = handle_expr(input_expression, assembly_data)?;
+    output_code += &input_expr_out.code;
+    let input_data = input_expr_out
+        .data
+        .context("expected input expression to output data!")?;
+    output_code += &comment("malloc- input expr end");
+
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+
+    let size_register = assembly_data.get_free_register()?;
+    output_code += &set(size_register, input_data.size);
+    let heap_allocation_base_addr_data = {
+        let size_data = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code += &size_data.write_register(size_register, 0, assembly_data)?;
+
+        let function_call_out =
+            call_function_code(&[size_data], alloc_function.clone(), assembly_data)?;
+
+        output_code += &function_call_out.code;
+        let heap_allocation_base_addr_data = function_call_out
+            .data
+            .context("expected core_allocate function to output data")?;
+        if heap_allocation_base_addr_data.data_type != DataType::U32 {
+            bail!("expected core_allocate function to output U32 data");
+        }
+        heap_allocation_base_addr_data
+    };
+
+    let heap_allocation_base_addr_register = assembly_data.get_free_register()?;
+    output_code += &heap_allocation_base_addr_data.read_register(
+        heap_allocation_base_addr_register,
+        0,
+        assembly_data,
+    )?;
+    // reuse allocation
+    let output_data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: input_data.size,
+        data_type: DataType::Reference {
+            inside: Box::new(input_data.data_type.clone()),
+            offset_of_data_from_reference_addr: 0,
+        },
+    };
+    output_code += &output_data
+        .write_directly_to_reference_pointer(heap_allocation_base_addr_register, assembly_data)?;
+    let data_copy_register = assembly_data.get_free_register()?;
+
+    output_code += &comment("malloc- copy data");
+    for i in 0..input_data.size {
+        output_code += &(input_data.read_register(data_copy_register, i, assembly_data)?
+            + &output_data.write_register(data_copy_register, i, assembly_data)?);
+    }
+
+    output_code += &comment("malloc- end");
+    assembly_data.mark_registers_free(&[
+        size_register,
+        data_copy_register,
+        heap_allocation_base_addr_register,
+    ]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(output_data),
+    })
+}
+pub fn free(value: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    todo!()
+}
+pub fn access_static_variable(
+    name_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let name = if let Expression::String(val, _) = name_expr {
+        val.split_at(1).1.to_string()
+    } else {
+        bail!("argument to be a String in function for accessing static variables.");
+    };
+    let mut output_code = String::new();
+
+    let static_variable = assembly_data
+        .static_variables
+        .get(&name)
+        .with_context(|| format!("there was no static variable with name: '{}'", name.clone()))?
+        .clone();
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+
+    let data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::Reference {
+            inside: Box::new(static_variable.data_type),
+            offset_of_data_from_reference_addr: 0,
+        },
+    };
+    let label_addr_translation_register = assembly_data.get_free_register()?;
+    output_code += &(set_label(label_addr_translation_register, &name)
+        + &data
+            .write_directly_to_reference_pointer(label_addr_translation_register, assembly_data)?);
+    assembly_data.mark_registers_free(&[label_addr_translation_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
+
+pub fn create_static_variable(
+    input_data_expression: Expression,
+    name_expr: Expression,
+
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let name = if let Expression::String(val, _) = name_expr {
+        val.split_at(1).1.to_string()
+    } else {
+        bail!("expected second argument to be a String in function for creating static variables.");
+    };
+    let mut output_code = String::new();
+    let input_data_expr_out = handle_expr(input_data_expression, assembly_data)?;
+    output_code += &input_data_expr_out.code;
+    let data = input_data_expr_out
+        .data
+        .context("expected input expression to output data!")?;
+
+    let static_declaration_end_label = assembly_data.get_label_name("static_declaration_end");
+    let label_addr_conversion_register = assembly_data.get_free_register()?;
+    output_code += &jmp_label(
+        &static_declaration_end_label,
+        label_addr_conversion_register,
+    );
+    output_code += &label(&name);
+    for _ in 0..data.size {
+        //Whatever so that assembler allocates this memory, this should never be run
+        output_code += &set(0, 0);
+    }
+
+    output_code += &label(&static_declaration_end_label);
+
+    let data_copy_register = assembly_data.get_free_register()?;
+    // write input data to static variable
+    {
+        let alloc_out = assembly_data.allocate_stack(1)?;
+        output_code += &alloc_out.0;
+        let data_for_static_variable = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::Reference {
+                inside: Box::new(data.data_type.clone()),
+                offset_of_data_from_reference_addr: 0,
+            },
+        };
+        output_code += &(set_label(label_addr_conversion_register, &name)
+            + &data_for_static_variable.write_directly_to_reference_pointer(
+                label_addr_conversion_register,
+                assembly_data,
+            )?);
+        for i in 0..data.size {
+            output_code += &(data.read_register(data_copy_register, i, assembly_data)?
+                + &data_for_static_variable.write_register(
+                    data_copy_register,
+                    i,
+                    assembly_data,
+                )?);
+        }
+    }
+
+    assembly_data.mark_registers_free(&[label_addr_conversion_register, data_copy_register]);
+
+    assembly_data.static_variables.insert(
+        name.clone(),
+        StaticVariable {
+            data_type: data.data_type,
+            label: name,
+        },
+    );
+
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
+}
+pub fn memory_access(
+    addr_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    output_code += &comment("memory_access");
+    let alloc_out = assembly_data.allocate_stack(1)?;
+
+    output_code += &alloc_out.0;
+
+    let data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::Reference {
+            inside: Box::new(DataType::U32),
+            offset_of_data_from_reference_addr: 0,
+        },
+    };
+    let expr_out = handle_expr(addr_expr, assembly_data)?;
+    output_code += &expr_out.code;
+    let reference_addr_register = assembly_data.get_free_register()?;
+    output_code += &expr_out
+        .data
+        .context("expected address expression to output data")?
+        .read_register(reference_addr_register, 0, assembly_data)?;
+
+    let destination_addr_registry = assembly_data.get_free_register()?;
+    output_code +=
+        &data.write_directly_to_reference_pointer(reference_addr_register, assembly_data)?;
+
+    assembly_data.mark_registers_free(&[reference_addr_register, destination_addr_registry]);
+    output_code += &comment("memory_access- end");
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
 pub fn array_len(assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
 

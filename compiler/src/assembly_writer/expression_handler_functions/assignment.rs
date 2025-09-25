@@ -1,7 +1,7 @@
 use crate::{
     assembly_writer::{
         assembly_instructions::*,
-        data_structures::{AssemblyData, DataType, ExpressionOutput},
+        data_structures::{AssemblyData, DataType, ExpressionOutput, StaticVariable},
         handle_expr,
     },
     lexer::tokens::Token,
@@ -39,6 +39,7 @@ pub fn assign_new_variable(
             );
         }
     }
+
     assembly_data.add_var(data, name)?;
 
     output_code += &comment("assign_new_variable - end");

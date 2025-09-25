@@ -318,7 +318,7 @@ pub fn reserved_symbols() -> HashMap<String, TokenKind> {
     HashMap::from([
         ("mut".to_string(), TokenKind::Mut),
         ("let".to_string(), TokenKind::Let),
-        ("const".to_string(), TokenKind::Const),
+        ("static".to_string(), TokenKind::Static),
         ("enum".to_string(), TokenKind::Enum),
         ("struct".to_string(), TokenKind::Struct),
         ("pub".to_string(), TokenKind::Pub),

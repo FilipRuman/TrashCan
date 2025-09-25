@@ -55,7 +55,7 @@ pub enum TokenKind {
     String,
     Identifier,
 
-    Const,
+    Static,
     Fn,
     Enum,
     Struct,

@@ -137,41 +137,6 @@ pub fn handle_reference(
     })
 }
 
-pub fn handle_variable_declaration(
-    variable_type: Type,
-    variable_name: String,
-    mutable: bool,
-    assembly_data: &mut AssemblyData,
-    debug_data: DebugData,
-) -> Result<ExpressionOutput> {
-    assembly_data.current_var_name_for_array_initialization = variable_name.to_owned();
-    assembly_data.current_var_name_for_function = variable_name.to_owned();
-
-    let data_type = DataType::parse_type(variable_type, assembly_data)?;
-
-    let size = data_type.size(assembly_data)?;
-
-    let mut code = comment(&format!("variable declaration: {variable_name}"));
-    let (alloc_code, stack_offset) = assembly_data.allocate_stack(size)?;
-    code += &alloc_code;
-    let addr_of_self_register = assembly_data.get_free_register()?;
-    let data = Data {
-        stack_frame_offset: stack_offset as i32,
-        size,
-        data_type: data_type.clone(),
-    };
-    assembly_data
-        .add_var(data.clone(), variable_name)
-        .with_context(|| format!("{debug_data:?}"))?;
-
-    code += &comment("variable declaration end");
-    Ok(ExpressionOutput {
-        code,
-        // add support for pointers and variables not stored on stack
-        data: Some(data),
-    })
-}
-
 pub fn handle_binary_expr(
     left: Expression,
     operator: Token,
