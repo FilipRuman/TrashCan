@@ -74,6 +74,8 @@ impl Lexer {
             Pattern::new(TokenKind::CloseCurly, "}"),
             Pattern::new(TokenKind::CloseParen, ")"),
             Pattern::new(TokenKind::OpenParen, "("),
+            Pattern::new(TokenKind::BitwiseShiftLeft, "<<"),
+            Pattern::new(TokenKind::BitwiseShiftRight, ">>"),
             Pattern::new(TokenKind::Equals, "=="),
             Pattern::new(TokenKind::NotEquals, "!="),
             Pattern::new(TokenKind::Assignment, "="),

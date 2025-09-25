@@ -37,10 +37,12 @@ pub enum TokenKind {
     SlashEquals,
     PlusPlus,
     MinusMinus,
-
-    False,
+        False,
     True,
     Return,
+
+BitwiseShiftLeft,
+    BitwiseShiftRight,
     Plus,
     Minus,
     Star,

@@ -4,7 +4,7 @@ use std::{
     ops::{Add, BitAnd, BitOr, BitXor, Not, Shl, Shr},
 };
 
-use log::debug;
+use log::{debug, info};
 
 use super::{
     b8::B8,
@@ -458,10 +458,14 @@ impl B32 {
         )
     }
     #[inline(always)]
-    // this is the same as moving cables forward and cutting ones that are not needed
-    pub fn shift_bits(self, shift: i8) -> B32 {
+    pub fn shift_bits(self, mut shift: i8) -> B32 {
+        shift *= -1;
         let mut bits = [false; 32];
-        for i in 0..32 - shift.max(0) {
+        info!("shift: {shift}");
+        for i in 0..32 {
+            if i + shift < 0 || i + shift > 32 {
+                continue;
+            }
             bits[(i + shift) as usize] = self.bit(i as u8);
         }
 

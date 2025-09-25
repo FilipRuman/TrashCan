@@ -86,6 +86,9 @@ impl Lookup {
         lookup.led(TokenKind::StarEquals, 1, parse_assignment);
         lookup.led(TokenKind::SlashEquals, 1, parse_assignment);
 
+        lookup.led(TokenKind::BitwiseShiftLeft, 2, parse_binary_expr);
+        lookup.led(TokenKind::BitwiseShiftRight, 2, parse_binary_expr);
+
         lookup.led(TokenKind::Plus, 2, parse_binary_expr);
         lookup.led(TokenKind::Minus, 2, parse_binary_expr);
         lookup.led(TokenKind::Star, 3, parse_binary_expr);
