@@ -37,7 +37,7 @@ pub fn handle_return(
     verify_function_output_with_return(function.output.to_owned(), expr_output.data.to_owned())
         .with_context(|| format!("{debug_data:?}"))?;
 
-    // write to output variables on stack
+    // write to output variable on stack
     if let Some(target_output) = function.output.to_owned() {
         output_code += &target_output.assign(&expr_output.data.unwrap(), assembly_data)?;
     }
@@ -174,9 +174,7 @@ pub fn handle_function(
         .get(&name)
         .context("handle_function -> assembly_data.functions.get(self.name)")?
         .clone();
-
-    // 1 because 0 -> return addr
-    assembly_data.current_offset_from_stack_frame_base = 1;
+    assembly_data.current_offset_from_stack_frame_base = 0;
 
     let mut output_code = String::new();
     output_code += &label(&function.label_name);
@@ -185,6 +183,9 @@ pub fn handle_function(
 
     output_code += &cp(initial_stack_frame_register, STACK_FRAME_POINTER);
     output_code += &cp(STACK_FRAME_POINTER, STACK_HEAD_POINTER);
+
+    // +1 because 0 addr stores return addr
+    output_code += &assembly_data.allocate_stack(1)?.0;
 
     let initial_stack_frame_alloc = assembly_data.allocate_stack(1)?;
     output_code += &initial_stack_frame_alloc.0;
