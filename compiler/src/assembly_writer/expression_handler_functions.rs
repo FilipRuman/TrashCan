@@ -583,10 +583,13 @@ pub fn handle_if(
     output_code += &jmpc_label(&label_name, addr_conversion_register, condition_register);
 
     output_code += &comment("if contents");
+    assembly_data.current_var_name_for_function.clear();
+
     for inside_expression in inside {
         let expression_output = handle_expr(inside_expression, assembly_data)?;
         output_code += &expression_output.code;
     }
+
     output_code += &comment("if contents end");
     output_code += &label(&label_name);
 
