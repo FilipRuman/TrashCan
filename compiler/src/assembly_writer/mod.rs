@@ -8,7 +8,7 @@ use expression_handler_functions::{
     functions::*,
     handle_array_initialization, handle_as, handle_binary_expr, handle_bool, handle_identifier,
     handle_if, handle_member_expression, handle_number, handle_open_square_brackets,
-    handle_reference, handle_string,
+    handle_prefix_expr, handle_reference, handle_string,
     loops::{handle_break, handle_for_loop, handle_while_loop},
     structs::data_types::{Struct, StructParsingState, StructProperty},
 };
@@ -196,7 +196,7 @@ fn handle_expr(
                     prefix,
                     value,
                     debug_data,
-                } => todo!(),
+                } => handle_prefix_expr(prefix,*value,assembly_data),
         Expression::Keyword(token_kind) => match token_kind {
                     TokenKind::SemiColon => Ok(ExpressionOutput {
                         code: "\n".to_string(),

@@ -13,7 +13,11 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use structs::{handle_struct_access, handle_struct_initialization};
 
-use super::{assembly_instructions::*, helper_methods::STACK_FRAME_POINTER, *};
+use super::{
+    assembly_instructions::*,
+    helper_methods::{STACK_FRAME_POINTER, STACK_HEAD_POINTER},
+    *,
+};
 
 pub fn handle_member_expression(
     left: Expression,
@@ -137,6 +141,54 @@ pub fn handle_reference(
     })
 }
 
+pub fn handle_prefix_expr(
+    prefix: Token,
+    value: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let data_register = assembly_data.get_free_register()?;
+    let operation_data_register = assembly_data.get_free_register()?;
+    let output_expr = handle_expr(value, assembly_data)?;
+
+    let input_data = output_expr
+        .data
+        .context("expected value expression to output data!")?;
+    output_code += &output_expr.code;
+
+    let code_to_run = match prefix.value.as_str() {
+        "-" => {
+            &(set(data_register, (-1_i32) as u32) + &mul(data_register, operation_data_register))
+        }
+        "!" => &not(data_register),
+        other => bail!("prefix operation: {other} wasn't handled"),
+    };
+
+    let output_data = {
+        let size = input_data.size;
+        let (code, stack_frame_offset) = assembly_data.allocate_stack(size)?;
+        output_code += &code;
+        Data {
+            stack_frame_offset: stack_frame_offset as i32,
+            size,
+            data_type: input_data.data_type.clone(),
+        }
+    };
+
+    for i in 0..input_data.size {
+        output_code += &input_data.read_register(data_register, i, assembly_data)?;
+        // add support for separate handles for different data types
+        output_code += code_to_run;
+        output_code += &output_data.write_register(data_register, 0, assembly_data)?;
+    }
+
+    output_code += &comment("handle_binary_expr - end");
+    assembly_data.mark_registers_free(&[data_register, operation_data_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(output_data),
+    })
+}
 pub fn handle_binary_expr(
     left: Expression,
     operator: Token,
