@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use crate::{
     assembly_writer::{
-        assembly_instructions::{
-            add, comment, gte, jmp_label, jmpc_label, label, not, set, sub,
-        },
+        assembly_instructions::{add, comment, gte, jmp_label, jmpc_label, label, not, set, sub},
         data_structures::{
             AssemblyData, CodeBlockType, Data, DataType, ExpressionOutput, VariableCodeBlocks,
         },
         handle_expr,
+        helper_methods::STACK_HEAD_POINTER,
     },
     parser::expression::Expression,
 };
@@ -36,6 +35,21 @@ pub fn handle_while_loop(
 ) -> Result<ExpressionOutput> {
     let previous_break_label_name = assembly_data.current_break_label_name.clone();
     let mut output_code = String::new();
+
+    let initial_stack_head_data = {
+        let alloc_out = assembly_data.allocate_stack(1)?;
+        output_code += &alloc_out.0;
+        let initial_stack_head_data = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code +=
+            &initial_stack_head_data.write_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+        initial_stack_head_data
+    };
+    let initial_offset_from_stack_base = assembly_data.current_offset_from_stack_frame_base;
+
     let while_start = assembly_data.get_label_name("while_start");
     let while_end = assembly_data.get_label_name("while_end");
     let condition_register = assembly_data.get_free_register()?;
@@ -82,6 +96,10 @@ pub fn handle_while_loop(
 
     assembly_data.variable_code_blocks.pop_front();
     assembly_data.current_break_label_name = previous_break_label_name;
+    assembly_data.current_offset_from_stack_frame_base = initial_offset_from_stack_base;
+
+    output_code += &initial_stack_head_data.read_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+    assembly_data.current_offset_from_stack_frame_base = initial_offset_from_stack_base;
 
     assembly_data.mark_registers_free(&[condition_register, label_addr_conversion_register]);
     Ok(ExpressionOutput {
@@ -96,6 +114,22 @@ pub fn handle_for_loop(
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
+
+    let initial_stack_head_data = {
+        let alloc_out = assembly_data.allocate_stack(1)?;
+        output_code += &alloc_out.0;
+        let initial_stack_head_data = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code +=
+            &initial_stack_head_data.write_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+        initial_stack_head_data
+    };
+    let initial_offset_from_stack_base = assembly_data.current_offset_from_stack_frame_base;
+
+    let initial_offset_from_stack_base = assembly_data.current_offset_from_stack_frame_base;
     let for_start = assembly_data.get_label_name("for_start");
     let for_end = assembly_data.get_label_name("for_end");
 
@@ -180,6 +214,10 @@ pub fn handle_for_loop(
 
     assembly_data.variable_code_blocks.pop_front();
     assembly_data.current_break_label_name = previous_break_label_name;
+
+    output_code += &initial_stack_head_data.read_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+    assembly_data.current_offset_from_stack_frame_base = initial_offset_from_stack_base;
+
     assembly_data.mark_registers_free(&[
         condition_register,
         label_addr_conversion_register,

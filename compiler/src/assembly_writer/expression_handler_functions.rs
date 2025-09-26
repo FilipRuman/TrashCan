@@ -559,8 +559,19 @@ pub fn handle_if(
     let mut output_code = String::new();
     output_code += &comment(&format!("if- condition: {condition:?}"));
 
-    let initial_stack_frame_offset = assembly_data.get_free_register()?;
-    output_code += &cp(initial_stack_frame_offset, STACK_FRAME_POINTER);
+    let initial_stack_head_data = {
+        let alloc_out = assembly_data.allocate_stack(1)?;
+        output_code += &alloc_out.0;
+        let initial_stack_head_data = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code +=
+            &initial_stack_head_data.write_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+        initial_stack_head_data
+    };
+    let initial_offset_from_stack_base = assembly_data.current_offset_from_stack_frame_base;
 
     let debug_data = condition.debug_data().to_owned();
 
@@ -594,16 +605,14 @@ pub fn handle_if(
     output_code += &label(&label_name);
 
     // deallocate all stack used by this if's contents
-    output_code += &cp(STACK_FRAME_POINTER, initial_stack_frame_offset);
+    output_code += &initial_stack_head_data.read_register(STACK_HEAD_POINTER, 0, assembly_data)?;
+    assembly_data.current_offset_from_stack_frame_base = initial_offset_from_stack_base;
+
     assembly_data.variable_code_blocks.pop_front();
 
     output_code += &comment("if end");
 
-    assembly_data.mark_registers_free(&[
-        condition_register,
-        addr_conversion_register,
-        initial_stack_frame_offset,
-    ]);
+    assembly_data.mark_registers_free(&[condition_register, addr_conversion_register]);
     Ok(ExpressionOutput {
         code: output_code,
         data: None,
