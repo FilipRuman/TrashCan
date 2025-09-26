@@ -228,6 +228,7 @@ pub fn handle_function(
     });
     for expression in inside {
         output_code += &handle_expr(expression, assembly_data)?.code;
+        assembly_data.current_var_name_for_function.clear();
     }
     assembly_data.current_function_data_for_return = previous_function_data;
     assembly_data.mark_registers_free(&[initial_stack_frame_register]);
@@ -246,7 +247,7 @@ pub fn handle_function_call(
     debug_data: DebugData,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
-    let name = convert_expression_to_function_name(left, assembly_data)?;
+    let name = convert_expression_to_function_name(left, assembly_data, true)?;
 
     if let Some(out) = handle_core_function_call(&name, &values, debug_data, assembly_data)
         .context("handle_core_function_call")?
@@ -399,13 +400,21 @@ pub fn call_function_code(
     })
 }
 
+/// first_call: this tells if this call is done recursively by this function
 pub fn convert_expression_to_function_name(
     expression: Expression,
     assembly_data: &mut AssemblyData,
+    first_call: bool,
 ) -> Result<String> {
+    info!(
+        "convert_expression_to_function_name, expr: {:?}, &assembly_data.current_var_name_for_function: {}",
+        expression, &assembly_data.current_var_name_for_function
+    );
     let base_name = match expression {
         Expression::Identifier(name, _) => {
-            if let Ok(var) = assembly_data.find_var(&name) {
+            if let Ok(var) = assembly_data.find_var(&name)
+                && !first_call
+            {
                 var.data_type.to_string()
             } else {
                 name
@@ -417,8 +426,8 @@ pub fn convert_expression_to_function_name(
             debug_data: _,
         } => format!(
             "{}.{}",
-            convert_expression_to_function_name(*left, assembly_data)?,
-            convert_expression_to_function_name(*right, assembly_data)?
+            convert_expression_to_function_name(*left, assembly_data, false)?,
+            convert_expression_to_function_name(*right, assembly_data, false)?
         ),
 
         other => {
