@@ -1,16 +1,105 @@
-// TODO: structs,support for functions inside structs, for/while loops support, test binary operations
+//  TODO: Implement: simple allocator, paging, hardware interrupts, graphics rendering, pheriperal input. 
+struct HeapBlock{
 
+}
+// Some mistakes weare made during making of this lang...
 
-let tst : &TestStruct= &TestStruct[a= 66, b= 1 ];
-tst.a = 1; 
-print_raw(a);
+create_static( 9000,"heap_start");
+create_static( 2000,"heap_len");
+create_static(2,"min_heap_size_pow_2")
+create_static(10,"max_heap_size_pow_2")
+create_static( {&HeapBlock, len : 8}, "free_heap_blocks_linked_lists")
+
+let out = malloc(88);
 
 halt();
 
-struct  TestStruct{
-a: u32,
-b: u32,
-}
-struct NextStruct{
 
-};
+fn core_allocate(size: u32)-> u32{
+	let size_log2= ceil_log2(size) ;
+	print_raw(*size_log2);
+
+	let min = access_static("min_heap_size_pow_2");
+	let max = access_static("max_heap_size_pow_2");
+
+
+	if size_log2 > max {
+      		// panic("tried to allocate memory with size that exceeded max limit");
+      		print("ghhhh");
+	}
+	let size_to_allocate_index = max(min,size_log2) -min;
+	
+	return 8000;
+}
+fn max(a:u32, b:u32) ->u32{
+    let mask : u32= !(a > b) as u32;      // 0xFFFFFFFF if a<b else 0
+    return (a && !mask) || (b && mask);
+}
+
+fn ceil_log2(x: u32) -> u32 {
+	let i = 0;
+	let pow_2 = 1;
+	while pow_2 < x {
+		pow_2 = pow_2 << 1; 
+		i += 1;       
+	}
+	return i;
+}
+
+
+
+
+
+
+
+//fn panic(text:&u32[]){
+//	print(text);
+//	halt();
+//	return ;
+//}
+//
+//fn core_deallocate(address: u32,size: u32){
+//	return ;
+//}
+
+//fn next_power_of_two(n: u32) -> u32 {
+//	if n ==0 {
+//		return 1;
+// 	}
+// 	n -= 1;
+// 	n = n|| (n >> 1);
+// 	n = n|| (n >> 2);
+// 	n = n|| (n >> 4);
+// 	n = n|| (n >> 8);
+// 	n = n|| (n >> 16);
+// 	return n + 1;
+//}
+
+
+
+//fn u32_to_string(val : u32) -> u32[9]{
+//	let out ={u32,len: 9,};
+//	let div  = 10;
+//	let i = 0;
+//	while val > 0{
+//		let mod = val % div;
+//		val -= mod * (div / 10);
+//		out[i] = mod+48;
+//		div *= 10;
+//		i += 1;
+//	}
+//		
+//	return out;
+//}
+//
+fn print(text: &u32[]){
+
+	let text_len = text.len();
+	for i in 0..text_len{
+		print_raw(text[i]);
+	}
+	print_raw("\n");
+	return ;
+}
+
+
