@@ -350,11 +350,16 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
             parser.advance()?;
             parser.expect(&TokenKind::Colon)?;
             length = parser.expect(&TokenKind::Number)?.value.parse::<u32>()?;
+
+            if parser.current_token_kind()? != &TokenKind::Comma {
+                break;
+            }
             parser.expect(&TokenKind::Comma)?;
             continue;
         }
 
         properties.push(parse_expr(parser, &0)?);
+
         parser.expect(&TokenKind::Comma)?;
     }
 
