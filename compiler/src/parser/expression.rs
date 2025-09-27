@@ -10,6 +10,7 @@ pub struct DebugData {
 #[derive(Debug, Clone)]
 pub enum Expression {
     As(Box<Expression>, Type, DebugData),
+    DirectReferenceAccess(Box<Expression>),
     Reference(Box<Expression>, DebugData),
     Boolean(bool, DebugData),
 

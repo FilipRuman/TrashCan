@@ -8,11 +8,11 @@ use super::{
     expression::{DebugData, Expression},
     expression_parsing_functions::{
         parse_array_initialization, parse_as, parse_assignment, parse_binary_expr, parse_bool_nod,
-        parse_break, parse_class_instantiation, parse_else, parse_for, parse_function,
-        parse_function_call, parse_grouping, parse_identifier_nod, parse_if, parse_indexing_array,
-        parse_keyword_nod, parse_member_expr, parse_number_nod, parse_prefix_nod, parse_range,
-        parse_reference, parse_return, parse_string_nod, parse_struct, parse_variable_declaration,
-        parse_while,
+        parse_break, parse_class_instantiation, parse_direct_reference_access, parse_else,
+        parse_for, parse_function, parse_function_call, parse_grouping, parse_identifier_nod,
+        parse_if, parse_indexing_array, parse_keyword_nod, parse_member_expr, parse_number_nod,
+        parse_prefix_nod, parse_range, parse_reference, parse_return, parse_string_nod,
+        parse_struct, parse_variable_declaration, parse_while,
     },
 };
 
@@ -95,6 +95,7 @@ impl Lookup {
         lookup.led(TokenKind::Slash, 3, parse_binary_expr);
         lookup.led(TokenKind::Percent, 3, parse_binary_expr);
 
+        lookup.nod(TokenKind::Star, 3, parse_direct_reference_access);
         lookup.nod(TokenKind::Break, 0, parse_break);
 
         lookup.led(TokenKind::Less, 4, parse_binary_expr);

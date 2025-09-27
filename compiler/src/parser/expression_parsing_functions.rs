@@ -376,6 +376,11 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         inside_type,
     })
 }
+pub fn parse_direct_reference_access(parser: &mut Parser) -> Result<Expression> {
+    Ok(Expression::DirectReferenceAccess(Box::new(parse_expr(
+        parser, &0,
+    )?)))
+}
 pub fn parse_class_instantiation(
     parser: &mut Parser,
     bp: &i8,
