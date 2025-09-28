@@ -1,105 +1,135 @@
-//  TODO: Implement: simple allocator, paging, hardware interrupts, graphics rendering, pheriperal input. 
+//  TODO: Implement: simple allocator, paging, hardware interrupts, graphics rendering, peripheral input. 
 struct HeapBlock{
+	next: &HeapBlock,
 
 }
-// Some mistakes weare made during making of this lang...
-
-create_static( 9000,"heap_start");
-create_static( 2000,"heap_len");
-create_static(2,"min_heap_size_pow_2")
-create_static(10,"max_heap_size_pow_2")
-create_static( {&HeapBlock, len : 8}, "free_heap_blocks_linked_lists")
-
-let out = malloc(88);
-
-halt();
-
-
-fn core_allocate(size: u32)-> u32{
-	let size_log2= ceil_log2(size) ;
-	print_raw(*size_log2);
-
-	let min = access_static("min_heap_size_pow_2");
-	let max = access_static("max_heap_size_pow_2");
-
-
-	if size_log2 > max {
-      		// panic("tried to allocate memory with size that exceeded max limit");
-      		print("ghhhh");
-	}
-	let size_to_allocate_index = max(min,size_log2) -min;
-	
-	return 8000;
-}
-fn max(a:u32, b:u32) ->u32{
-    let mask : u32= !(a > b) as u32;      // 0xFFFFFFFF if a<b else 0
-    return (a && !mask) || (b && mask);
-}
-
-fn ceil_log2(x: u32) -> u32 {
-	let i = 0;
-	let pow_2 = 1;
-	while pow_2 < x {
-		pow_2 = pow_2 << 1; 
-		i += 1;       
-	}
-	return i;
-}
+// INFO: For memory allocation: 
+//To find if memory is allocated do: use hash function- it will be a simple thing like juts multiply the addr by some value and then mod the output by the size of hashmap. 
+// that way you get a index in array, than you can check if addr of this thing is good, if not look to the child node. if nothing matches this addr is fre.
+// this will be useful for defragmentation 
 
 
 
-
-
-
-
+print_raw(("core"[2]);
+print_raw("\n"[0])
+// Some mistakes were made during making of this lang...
+//
+//create_static( 9000,"heap_start");
+//create_static( 2000,"heap_len");
+//create_static(2,"min_heap_size_pow_2")
+//create_static(10,"max_heap_size_pow_2")
+//
+////
+//
+//mem(35000)= 555;
+//let first = 35000 as &HeapBlock ;
+//create_static( {&HeapBlock, first,}, "free_heap_blocks_linked_lists");
+//
+//let out = malloc(88);
+//
+//print_raw(out);
+//
+//halt();
+//
+//
+//fn core_allocate(size: u32)-> u32{
+//
+//	let size_log2= ceil_log2(size) ;
+//	print_raw(size_log2);
+//
+//	let min = access_static("min_heap_size_pow_2");
+//	let max = access_static("max_heap_size_pow_2");
+//
+//
+//	if size_log2 > max {
+//      		panic("tried to allocate memory with size that exceeded max limit");
+//	}
+//	let size_to_allocate_index = max(min,size_log2) -min;
+//
+//	let block_to_allocate = access_static("free_heap_blocks_linked_lists")[size_to_allocate_index];
+//	print("block_to_allocate");
+//	print_raw(*block_to_allocate);
+//	if  (*block_to_allocate) == 0{
+//		panic("there was not enough blocks of needed size");
+//	}
+//	
+//	let next_addr = *block_to_allocate.next;
+//
+//	print("next:");
+//	print_raw(next_addr);	
+//	
+//	let output = *block_to_allocate;
+//	(*access_static("free_heap_blocks_linked_lists")[size_to_allocate_index])  = next_addr; 
+//
+//	print("current:");
+//	print_raw(*access_static("free_heap_blocks_linked_lists")[size_to_allocate_index]);
+//
+//	return output;
+//}
+//fn max(a:u32, b:u32) ->u32{
+//    let mask : u32= !(a > b) as u32;      // 0xFFFFFFFF if a<b else 0
+//    return (a && !mask) || (b && mask);
+//}
+//
+//fn ceil_log2(x: u32) -> u32 {
+//	let i = 0;
+//	let pow_2 = 1;
+//	while pow_2 < x {
+//		pow_2 = pow_2 << 1; 
+//		i += 1;       
+//	}
+//	return i;
+//}
+//
+//
 //fn panic(text:&u32[]){
 //	print(text);
 //	halt();
 //	return ;
 //}
 //
-//fn core_deallocate(address: u32,size: u32){
+////fn core_deallocate(address: u32,size: u32){
+////	return ;
+////}
+//
+////fn next_power_of_two(n: u32) -> u32 {
+////	if n ==0 {
+////		return 1;
+//// 	}
+//// 	n -= 1;
+//// 	n = n|| (n >> 1);
+//// 	n = n|| (n >> 2);
+//// 	n = n|| (n >> 4);
+//// 	n = n|| (n >> 8);
+//// 	n = n|| (n >> 16);
+//// 	return n + 1;
+////}
+//
+//
+//
+////fn u32_to_string(val : u32) -> u32[9]{
+////	let out ={u32,len: 9,};
+////	let div  = 10;
+////	let i = 0;
+////	while val > 0{
+////		let mod = val % div;
+////		val -= mod * (div / 10);
+////		out[i] = mod+48;
+////		div *= 10;
+////		i += 1;
+////	}
+////		
+////	return out;
+////}
+////
+//fn print(text: &u32[]){
+//
+//	let text_len = text.len();
+//	for i in 0..text_len{
+//		print_raw(text[i]);
+//	}
+//	print_raw("\n");
 //	return ;
 //}
-
-//fn next_power_of_two(n: u32) -> u32 {
-//	if n ==0 {
-//		return 1;
-// 	}
-// 	n -= 1;
-// 	n = n|| (n >> 1);
-// 	n = n|| (n >> 2);
-// 	n = n|| (n >> 4);
-// 	n = n|| (n >> 8);
-// 	n = n|| (n >> 16);
-// 	return n + 1;
-//}
-
-
-
-//fn u32_to_string(val : u32) -> u32[9]{
-//	let out ={u32,len: 9,};
-//	let div  = 10;
-//	let i = 0;
-//	while val > 0{
-//		let mod = val % div;
-//		val -= mod * (div / 10);
-//		out[i] = mod+48;
-//		div *= 10;
-//		i += 1;
-//	}
-//		
-//	return out;
-//}
 //
-fn print(text: &u32[]){
-
-	let text_len = text.len();
-	for i in 0..text_len{
-		print_raw(text[i]);
-	}
-	print_raw("\n");
-	return ;
-}
-
 
