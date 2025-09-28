@@ -10,7 +10,7 @@ pub struct DebugData {
 #[derive(Debug, Clone)]
 pub enum Expression {
     As(Box<Expression>, Type, DebugData),
-    DirectReferenceAccess(Box<Expression>),
+    DirectReferenceAccess(Box<Expression>, DebugData),
     Reference(Box<Expression>, DebugData),
     Boolean(bool, DebugData),
 
@@ -158,6 +158,8 @@ impl Expression {
             Self::Boolean(_, debug_data) => debug_data,
             Expression::String(_, debug_data) => debug_data,
             Expression::Identifier(_, debug_data) => debug_data,
+
+            Expression::DirectReferenceAccess(_, debug_data) => debug_data,
             Expression::Prefix {
                 prefix,
                 value,

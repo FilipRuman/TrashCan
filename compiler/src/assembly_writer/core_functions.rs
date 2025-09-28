@@ -103,6 +103,7 @@ pub fn access_static_variable(
         bail!("argument to be a String in function for accessing static variables.");
     };
     let mut output_code = String::new();
+    output_code += &comment("access_static_variable");
 
     let static_variable = assembly_data
         .static_variables
@@ -125,6 +126,8 @@ pub fn access_static_variable(
         + &data
             .write_directly_to_reference_pointer(label_addr_translation_register, assembly_data)?);
     assembly_data.mark_registers_free(&[label_addr_translation_register]);
+
+    output_code += &comment("access_static_variable-end");
     Ok(ExpressionOutput {
         code: output_code,
         data: Some(data),

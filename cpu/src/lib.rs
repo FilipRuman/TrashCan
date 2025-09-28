@@ -1,6 +1,5 @@
 #![allow(warnings)]
 use std::{
-    ffi::c_str,
     sync::{OnceLock, atomic::AtomicBool},
     time::{Duration, Instant},
 };

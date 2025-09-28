@@ -461,7 +461,6 @@ impl B32 {
     pub fn shift_bits(self, mut shift: i8) -> B32 {
         shift *= -1;
         let mut bits = [false; 32];
-        info!("shift: {shift}");
         for i in 0..32 {
             if i + shift < 0 || i + shift >= 32 {
                 continue;

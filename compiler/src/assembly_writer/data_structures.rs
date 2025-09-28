@@ -245,12 +245,56 @@ impl Data {
         let offset_register = assembly_data.get_free_register()?;
 
         output_code += &(comment(&format!(
-            "write_directly_to_reference_pointer - {offset_register}"
+            "write_directly_to_reference_pointer - {offset_register}, input: r{input_register}"
         )));
         output_code += &(set(offset_register, self.stack_frame_offset as u32)
             + &write_data_to_stack(offset_register, input_register));
 
         output_code += &(comment(&format!("write_directly_to_reference_pointer - end")));
+        assembly_data.mark_registers_free(&[offset_register]);
+        Ok(output_code)
+    }
+    pub fn read_addr_of_last_reference_in_chain(
+        &self,
+        output_register: u8,
+        assembly_data: &mut AssemblyData,
+    ) -> Result<String> {
+        if !self.is_reference() {
+            bail!(
+                "you tried to read referenced addr of variable: {:?} that is not a reference",
+                self
+            )
+        }
+        let mut output_code = String::new();
+        output_code += &comment(&format!(
+            "read_addr_of_last_reference_in_chain -output_register - r{output_register}"
+        ));
+        let offset_register = assembly_data.get_free_register()?;
+
+        let mut current_data_type = if let DataType::Reference {
+            inside,
+            offset_of_data_from_reference_addr: _,
+        } = self.data_type.clone()
+        {
+            *inside
+        } else {
+            bail!("expected self to be a reference!")
+        };
+        output_code += &(set(output_register, self.stack_frame_offset as u32)
+            + &add(output_register, STACK_FRAME_POINTER));
+
+        while let DataType::Reference {
+            inside,
+            offset_of_data_from_reference_addr,
+        } = current_data_type
+        {
+            output_code += &(read(output_register, output_register)
+                + &set(offset_register, offset_of_data_from_reference_addr)
+                + &add(output_register, offset_register));
+            current_data_type = *inside;
+        }
+        output_code += &comment(&format!("read_addr_of_last_reference_in_chain "));
+
         assembly_data.mark_registers_free(&[offset_register]);
         Ok(output_code)
     }
@@ -303,6 +347,7 @@ impl Data {
             + &add(output_register, STACK_FRAME_POINTER)
             + &comment("read_addr_of_self - end")
     }
+
     pub fn read_referenced_address(
         &self,
         output_addr_register: u8,

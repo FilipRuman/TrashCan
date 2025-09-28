@@ -13,12 +13,45 @@ use crate::{
 use anyhow::{Context, Result, bail};
 use structs::{handle_struct_access, handle_struct_initialization};
 
-use super::{
-    assembly_instructions::*,
-    helper_methods::{STACK_FRAME_POINTER, STACK_HEAD_POINTER},
-    *,
-};
+use super::{assembly_instructions::*, helper_methods::STACK_HEAD_POINTER, *};
 
+pub fn direct_reference_access(
+    input_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    output_code += &comment("direct_reference_accesss");
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+    let data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::Reference {
+            inside: Box::new(DataType::U32),
+            offset_of_data_from_reference_addr: 0,
+        },
+    };
+
+    output_code += &comment("direct_reference_accesss - handle_inside_expr");
+    let input_expr_out = handle_expr(input_expr, assembly_data)?;
+    output_code += &input_expr_out.code;
+    output_code += &comment("direct_reference_accesss - handle_inside_expr- end");
+
+    let data_copy_register = assembly_data.get_free_register()?;
+    output_code += &(input_expr_out
+        .data
+        .context("expected input expression to output data!")?
+        .read_addr_of_last_reference_in_chain(data_copy_register, assembly_data)?
+        + &data.write_directly_to_reference_pointer(data_copy_register, assembly_data)?);
+
+    assembly_data.mark_registers_free(&[data_copy_register]);
+
+    output_code += &comment("direct_reference_accesss - end");
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
 pub fn handle_member_expression(
     left: Expression,
     right: Expression,
@@ -320,11 +353,25 @@ pub fn handle_identifier(
     assembly_data.current_var_name_for_array_initialization = name.to_owned();
     assembly_data.current_var_name_for_function = name.to_owned();
 
-    let variable = assembly_data.find_var(&name).context("handle_identifier")?;
-    Ok(ExpressionOutput {
-        code: String::new(),
-        data: Some(variable.to_owned()),
-    })
+    if let Ok(variable) = assembly_data.find_var(&name) {
+        Ok(ExpressionOutput {
+            code: String::new(),
+            data: Some(variable.to_owned()),
+        })
+    } else if assembly_data.find_struct(&name).is_ok() {
+        Ok(ExpressionOutput {
+            code: String::new(),
+            data: Some(Data {
+                stack_frame_offset: 0,
+                size: 0,
+                data_type: DataType::Struct {
+                    name: name.to_owned(),
+                },
+            }),
+        })
+    } else {
+        bail!("neither there was a variable nor a struct type with name: '{name}'")
+    }
 }
 pub fn handle_string(value: String, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let mut chars = value.chars();
@@ -547,30 +594,38 @@ pub fn handle_open_square_brackets(
     inside_expr: Vec<Expression>,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
-    info!("handle_open_brackets");
-    let name = if let Expression::Identifier(name, _) = left {
-        name
+    let mut output_code = String::new();
+    let left_expr_out = handle_expr(left, assembly_data)?;
+    output_code += &left_expr_out.code;
+
+    let data = left_expr_out
+        .data
+        .context("expected expression on the left form square brackets to output data!")?;
+    if let DataType::Struct { name } = data.data_type.unwrap_from_references() {
+        let struct_type = assembly_data
+            .find_struct(&name)
+            .with_context(|| format!("there was no struct type with name: '{name}'"))?;
+        let expr_out= handle_struct_initialization(struct_type.to_owned(), assembly_data, inside_expr.clone())
+            .with_context(|| format!("handle_struct_initialization, target struct_type:'{:#?}', found_expression:'{:#?}'", &struct_type,&inside_expr))
+?;
+        Ok(ExpressionOutput {
+            code: output_code + &expr_out.code,
+            data: expr_out.data,
+        })
     } else {
-        bail!("expected left to be: Expression::Identifier found: {left:?}");
-    };
-    let find_struct = assembly_data.find_struct(&name);
-    if let Ok(var) = assembly_data.find_var(&name) {
-        handle_array_indexing(
-            var.to_owned(),
+        let expr_out = handle_array_indexing(
+            data,
             inside_expr
                 .first()
                 .context("found no data needed for indexing an array {}")?
                 .clone(),
             assembly_data,
         )
-        .context("handle_array_indexing")
-    } else if let Ok(struct_type) = find_struct {
-        handle_struct_initialization(struct_type.to_owned(), assembly_data, inside_expr.clone())
-            .with_context(|| format!("handle_struct_initialization, target struct_type:'{:#?}', found_expression:'{:#?}'", &struct_type,&inside_expr))
-    } else {
-        bail!(
-            "The identifier before the opening brackets is neither a variable name nor a struct name!"
-        )
+        .context("handle_array_indexing")?;
+        Ok(ExpressionOutput {
+            code: output_code + &expr_out.code,
+            data: expr_out.data,
+        })
     }
 }
 

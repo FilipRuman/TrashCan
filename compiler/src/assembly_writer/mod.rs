@@ -4,13 +4,7 @@ use anyhow::{Context, Result, bail};
 use assembly_instructions::halt;
 use data_structures::*;
 use expression_handler_functions::{
-    assignment::handle_assignment,
-    functions::*,
-    handle_array_initialization, handle_as, handle_binary_expr, handle_bool, handle_identifier,
-    handle_if, handle_member_expression, handle_number, handle_open_square_brackets,
-    handle_prefix_expr, handle_reference, handle_string,
-    loops::{handle_break, handle_for_loop, handle_while_loop},
-    structs::data_types::{Struct, StructParsingState, StructProperty},
+    assignment::handle_assignment, direct_reference_access, functions::*, handle_array_initialization, handle_as, handle_binary_expr, handle_bool, handle_identifier, handle_if, handle_member_expression, handle_number, handle_open_square_brackets, handle_prefix_expr, handle_reference, handle_string, loops::{handle_break, handle_for_loop, handle_while_loop}, structs::data_types::{Struct, StructParsingState, StructProperty}
 };
 use log::info;
 
@@ -185,6 +179,7 @@ fn handle_expr(
 ) -> Result<ExpressionOutput> {
     info!("handle_expr - {expression:?}");
     match expression.clone() {
+        Expression::DirectReferenceAccess(inside,_ ) =>direct_reference_access(*inside, assembly_data), 
         Expression::Break =>  handle_break(assembly_data),
         Expression::Number(value, debug_data) => handle_number(value, assembly_data),
         Expression::Boolean(value, debug_data) => handle_bool(value, assembly_data),

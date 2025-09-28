@@ -255,18 +255,16 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
 
 pub fn parse_expr(parser: &mut Parser, bp: &i8) -> Result<Expression> {
     let nod = parser.current_token().context("parse_expr -> nod")?;
+
+    let is_semicolon = nod.kind != TokenKind::SemiColon;
     let mut left = parser
         .lookup
         .get_nod(nod.kind, parser.get_current_debug_data()?)
         .context("parse_expr -> left")?(parser)
     .context("parse_expr -> left function")?;
 
-    while parser.current_bp()? > bp {
-        let led = parser
-            .current_token()
-            .context("parse_expr -> led")?
-            .kind
-            .clone();
+    while is_semicolon && parser.current_bp()? > bp {
+        let led = parser.current_token().context("parse_expr -> led")?.kind;
         let led_fn = parser
             .lookup
             .get_led(led, parser.get_current_debug_data()?)
@@ -377,9 +375,11 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
     })
 }
 pub fn parse_direct_reference_access(parser: &mut Parser) -> Result<Expression> {
-    Ok(Expression::DirectReferenceAccess(Box::new(parse_expr(
-        parser, &0,
-    )?)))
+    parser.expect(&TokenKind::Star)?;
+    Ok(Expression::DirectReferenceAccess(
+        Box::new(parse_expr(parser, &0)?),
+        parser.get_current_debug_data()?,
+    ))
 }
 pub fn parse_class_instantiation(
     parser: &mut Parser,

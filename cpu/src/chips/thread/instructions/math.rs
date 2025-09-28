@@ -1,3 +1,6 @@
+use eframe::emath::interpolation_factor;
+use log::info;
+
 use crate::{B8, chips::thread::Thread};
 impl Thread {
     pub fn Add(&self, a_register: B8, b_register: B8, run: bool) {
@@ -22,6 +25,12 @@ impl Thread {
         );
     }
     pub fn Mul(&self, a_register: B8, b_register: B8, run: bool) {
+        info!(
+            "Mul - a: {} b: {} out: {}",
+            self.registers.read(a_register),
+            self.registers.read(b_register),
+            self.registers.read(a_register) * self.registers.read(b_register)
+        );
         self.registers.write(
             self.registers.read(a_register) * self.registers.read(b_register),
             a_register,
