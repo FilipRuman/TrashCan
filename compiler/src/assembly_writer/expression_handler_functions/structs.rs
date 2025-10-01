@@ -72,7 +72,7 @@ pub fn handle_struct_initialization(
                 .variable_code_blocks
                 .push_front(VariableCodeBlocks {
                     variables: HashMap::new(),
-                    code_block_type: CodeBlockType::Exclusive,
+                    code_block_type: CodeBlockType::Inclusive,
                 });
 
             let property_data = Data {
