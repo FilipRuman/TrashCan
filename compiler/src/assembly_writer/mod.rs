@@ -212,7 +212,7 @@ fn handle_expr(
                     name,
                     mutable,
                     debug_data,
-                } => /* handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data) */  bail!("this shouldn't be ever called. handle_assignment should have handled this "),
+                } => /* handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data) */  bail!("This should never be called. handle_assignment should have handled this. "),
         Expression::Grouping(expression, debug_data) => handle_expr(*expression, assembly_data),
         Expression::Struct {
                     public,
@@ -237,7 +237,7 @@ fn handle_expr(
                     name,
                     properties,
                     debug_data,
-                } => bail!("this shouldn't be ever called"),
+                } => bail!("This should never be called."),
         Expression::ArrayInitialization {
                     properties,
                     debug_data,
@@ -257,7 +257,7 @@ fn handle_expr(
                     var_type,
                     debug_data,
                 } => bail!(
-                    "this should not be called because function properties are directly handled by parsing function declarations!"
+"This should never be called. 'handle_function_declarations' should have handled this."
                 ),
         Expression::MemberExpr {
                     left,
@@ -311,5 +311,5 @@ bail!(
                 } => handle_function_call(*left, values, debug_data, assembly_data),
         Expression::Reference(expression, debug_data) => handle_reference(*expression,assembly_data),
         Expression::As(expression, target_type, debug_data) => handle_as(*expression,target_type,assembly_data),
-    }.with_context(|| format!("Handle expression: {expression:?}"))
+    }.with_context(|| format!("Handle expression: {expression:#?}"))
 }
