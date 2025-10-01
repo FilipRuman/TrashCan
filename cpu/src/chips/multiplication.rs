@@ -7,11 +7,10 @@ impl Mul for B32 {
 
     fn mul(self, rhs: Self) -> Self::Output {
         let mut sum = Self(0);
-        for i in 0..16 {
-            //TODO: Make multiplication work!
-            let partial = Self(0).mux(rhs.shift_bits(i), self.bit(i as u8));
-
-            sum += partial;
+        for i in 0..32 {
+            if self.bit(i) {
+                sum += rhs << B32(i as u32);
+            }
         }
         sum
     }
