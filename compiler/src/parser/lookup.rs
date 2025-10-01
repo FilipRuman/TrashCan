@@ -110,14 +110,14 @@ impl Lookup {
         lookup.led(TokenKind::Dot, 1, parse_member_expr);
         lookup.led(TokenKind::DotDot, 1, parse_range);
 
-        lookup.led(TokenKind::OpenParen, 2, parse_function_call);
+        lookup.led(TokenKind::OpenParen, 5, parse_function_call);
         lookup.led(TokenKind::OpenBracket, 5, parse_indexing_array);
 
         lookup.binding_power_lu.insert(TokenKind::CloseBracket, -1);
         lookup.led(TokenKind::OpenCurly, 5, parse_class_instantiation);
         lookup.binding_power_lu.insert(TokenKind::CloseCurly, 0);
 
-        lookup.nod(TokenKind::OpenParen, 2, parse_grouping);
+        lookup.nod(TokenKind::OpenParen, 5, parse_grouping);
         lookup.nod(TokenKind::CloseParen, 0, parse_grouping);
 
         lookup.nod(TokenKind::Fn, 0, parse_function);
