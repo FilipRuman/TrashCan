@@ -1,4 +1,4 @@
-use super::assembly_instructions::{comment, jmp, jmp_label, label, set_label, write};
+use super::assembly_instructions::{add, comment, jmp, jmp_label, label, read, set_label, write};
 use super::data_structures::{Data, StaticVariable};
 use super::expression_handler_functions::functions::{call_function_code, handle_function_call};
 use super::{
@@ -9,6 +9,55 @@ use super::{
 use crate::{assembly_writer::data_structures::DataType, parser::expression::Expression};
 use anyhow::*;
 
+pub fn mark(expr: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    let text = if let Expression::String(text, _) = expr {
+        text
+    } else {
+        bail!("expected input expression to be a string")
+    };
+    Ok(ExpressionOutput {
+        code: format!("//; {text} \n"),
+        data: None,
+    })
+}
+
+pub fn direct_reference_access(
+    input_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    output_code += &comment("direct_reference_access");
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+    let data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::Reference {
+            inside: Box::new(DataType::U32),
+            offset_of_data_from_reference_addr: 0,
+        },
+    };
+
+    output_code += &comment("direct_reference_access - handle_inside_expr");
+    let input_expr_out = handle_expr(input_expr, assembly_data)?;
+    output_code += &input_expr_out.code;
+    output_code += &comment("direct_reference_access - handle_inside_expr- end");
+
+    let data_copy_register = assembly_data.get_free_register()?;
+    output_code += &(input_expr_out
+        .data
+        .context("expected input expression to output data!")?
+        .read_addr_of_last_reference_in_chain(data_copy_register, assembly_data)?
+        + &data.write_directly_to_reference_pointer(data_copy_register, assembly_data)?);
+
+    assembly_data.mark_registers_free(&[data_copy_register]);
+
+    output_code += &comment("direct_reference_accesss - end");
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
 pub fn malloc(
     input_expression: Expression,
     assembly_data: &mut AssemblyData,
@@ -90,8 +139,81 @@ pub fn malloc(
         data: Some(output_data),
     })
 }
-pub fn free(value: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
-    todo!()
+pub fn free(
+    input_expression: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    output_code += &comment("free");
+
+    let alloc_function = assembly_data
+        .find_function("core_deallocate")
+        .context("to use free you need to declare 'core_deallocate' function")?
+        .clone();
+
+    output_code += &comment("free - input expr");
+
+    let input_expr_out = handle_expr(input_expression, assembly_data)?;
+    output_code += &input_expr_out.code;
+    let input_data = input_expr_out
+        .data
+        .context("expected input expression to output data!")?;
+
+    let size_register = assembly_data.get_free_register()?;
+    let address_register = assembly_data.get_free_register()?;
+
+    let support_register = assembly_data.get_free_register()?;
+    if let DataType::Reference {
+        ref inside,
+        offset_of_data_from_reference_addr,
+    } = input_data.data_type
+    {
+        output_code += &set(size_register, inside.size(assembly_data)?);
+
+        output_code += &(input_data.read_addr_of_self(address_register)
+            + &read(address_register, address_register)
+            + &set(support_register, offset_of_data_from_reference_addr)
+            + &add(address_register, support_register));
+    } else {
+        bail!("TODO")
+    }
+
+    output_code += &comment("free - input expr end");
+
+    // allocate stack for input data for core_deallocate function
+    let alloc_out = assembly_data.allocate_stack(2)?;
+    output_code += &alloc_out.0;
+
+    let addr_data = {
+        let addr_data = Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code += &addr_data.write_register(address_register, 0, assembly_data)?;
+        addr_data
+    };
+    let size_data = {
+        let size_data = Data {
+            stack_frame_offset: alloc_out.1 as i32 + 1,
+            size: 1,
+            data_type: DataType::U32,
+        };
+        output_code += &size_data.write_register(size_register, 0, assembly_data)?;
+        size_data
+    };
+    let function_call_out = call_function_code(
+        &[addr_data, size_data],
+        alloc_function.clone(),
+        assembly_data,
+    )?;
+    output_code += &function_call_out.code;
+    output_code += &comment("free - end");
+    assembly_data.mark_registers_free(&[size_register, address_register, support_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
 }
 pub fn access_static_variable(
     name_expr: Expression,
@@ -277,11 +399,11 @@ pub fn print_raw(value: Expression, assembly_data: &mut AssemblyData) -> Result<
 
     let mut output_code = String::new();
 
-    //  serial peripheral index - 0
-    output_code += &set(peripheral_registry, 0);
-
     let expression_output = handle_expr(value, assembly_data)?;
     output_code += &expression_output.code;
+
+    //  serial peripheral index - 0
+    output_code += &set(peripheral_registry, 0);
 
     if let Some(data) = expression_output.data {
         for register in 0..data.size {

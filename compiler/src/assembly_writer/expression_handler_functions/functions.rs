@@ -1,7 +1,10 @@
 pub mod data_types;
 
 use crate::assembly_writer::{
-    core_functions::{access_static_variable, create_static_variable, malloc, memory_access},
+    core_functions::{
+        access_static_variable, create_static_variable, direct_reference_access, free, malloc,
+        mark, memory_access,
+    },
     data_types::FunctionInputData,
 };
 use std::collections::HashMap;
@@ -468,6 +471,23 @@ pub fn handle_core_function_call(
 
             Ok(Some(malloc(values[0].to_owned(), assembly_data)?))
         }
+        "free" => {
+            expect_input_len(values, 1).context("free")?;
+
+            Ok(Some(free(values[0].to_owned(), assembly_data)?))
+        }
+        "mark" => {
+            expect_input_len(values, 1).context("mark")?;
+            Ok(Some(mark(values[0].to_owned(), assembly_data)?))
+        }
+        "access_reference" => {
+            expect_input_len(values, 1).context("access_reference")?;
+            Ok(Some(direct_reference_access(
+                values[0].to_owned(),
+                assembly_data,
+            )?))
+        }
+
         "access_static" => {
             expect_input_len(values, 1).context("statics")?;
             Ok(Some(access_static_variable(
