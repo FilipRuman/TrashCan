@@ -57,7 +57,6 @@ fn instruction_data_to_binary(
         let b32: B32 = match additional_data {
             parsing::AdditionalData::RawNumber(num) => B32(num as u32),
             parsing::AdditionalData::Label(label_name) => {
-                info!("labels: {labels:?}");
                 let addr = labels
                     .get(&label_name)
                     .with_context(|| format!("label with name: {label_name} was not found!"))?;
