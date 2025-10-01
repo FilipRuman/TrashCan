@@ -270,12 +270,19 @@ fn handle_expr(
                     condition,
                     inside,
                     debug_data,
-                } => handle_if(*condition, inside, assembly_data),
+                    chained_elses
+                } => handle_if(chained_elses,*condition, inside, assembly_data),
         Expression::Else {
                     condition,
                     inside,
                     debug_data,
-                } => todo!(),
+                } => 
+bail!(
+
+"This should never be called. 'handle_if' should have handled this."
+                ),
+
+
         Expression::SquareBrackets {
                     left,
                     indexes,

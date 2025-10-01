@@ -110,6 +110,8 @@ pub enum Expression {
         condition: Box<Expression>,
         inside: Vec<Expression>,
 
+        /// those will be else statements with or without conditions
+        chained_elses: Vec<Expression>,
         debug_data: DebugData,
     },
     Else {
@@ -232,6 +234,7 @@ impl Expression {
                 condition: _,
                 inside: _,
                 debug_data,
+                chained_elses: _,
             } => debug_data,
             Expression::Else {
                 condition,

@@ -140,8 +140,13 @@ pub fn parse_if(parser: &mut Parser) -> Result<Expression> {
         })?);
     }
     parser.expect(&TokenKind::CloseCurly)?;
+    let mut chained_elses = Vec::new();
+    while parser.current_token_kind()? == &TokenKind::Else {
+        chained_elses.push(parse_else(parser)?);
+    }
 
     Ok(Expression::If {
+        chained_elses,
         condition: Box::new(condition),
         inside,
 
