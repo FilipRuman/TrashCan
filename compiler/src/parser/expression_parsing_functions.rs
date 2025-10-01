@@ -374,9 +374,9 @@ pub fn parse_array_initialization(parser: &mut Parser) -> Result<Expression> {
         inside_type,
     })
 }
-pub fn parse_direct_reference_access(parser: &mut Parser) -> Result<Expression> {
+pub fn parse_dereference(parser: &mut Parser) -> Result<Expression> {
     parser.expect(&TokenKind::Star)?;
-    Ok(Expression::DirectReferenceAccess(
+    Ok(Expression::Dereference(
         Box::new(parse_expr(parser, &0)?),
         parser.get_current_debug_data()?,
     ))

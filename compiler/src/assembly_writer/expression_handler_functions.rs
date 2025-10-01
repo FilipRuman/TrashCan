@@ -1,4 +1,5 @@
 pub mod assignment;
+pub mod conditional;
 pub mod functions;
 pub mod loops;
 pub mod structs;
@@ -15,43 +16,42 @@ use structs::{handle_struct_access, handle_struct_initialization};
 
 use super::{assembly_instructions::*, helper_methods::STACK_HEAD_POINTER, *};
 
-pub fn direct_reference_access(
+pub fn dereference(
     input_expr: Expression,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
     let mut output_code = String::new();
-    output_code += &comment("direct_reference_accesss");
-    let alloc_out = assembly_data.allocate_stack(1)?;
-    output_code += &alloc_out.0;
-    let data = Data {
-        stack_frame_offset: alloc_out.1 as i32,
-        size: 1,
-        data_type: DataType::Reference {
-            inside: Box::new(DataType::U32),
-            offset_of_data_from_reference_addr: 0,
-        },
+    let expr_out = handle_expr(input_expr, assembly_data)?;
+    output_code += &expr_out.code;
+    let input_data = expr_out
+        .data
+        .context("expected input expression to output data")?;
+    let output_data = {
+        let output_data_type = input_data.data_type.unwrap_from_references();
+        let size = output_data_type.size(assembly_data)?;
+        let alloc_out = assembly_data.allocate_stack(size)?;
+
+        output_code += &alloc_out.0;
+        Data {
+            stack_frame_offset: alloc_out.1 as i32,
+            size,
+            data_type: output_data_type,
+        }
     };
 
-    output_code += &comment("direct_reference_accesss - handle_inside_expr");
-    let input_expr_out = handle_expr(input_expr, assembly_data)?;
-    output_code += &input_expr_out.code;
-    output_code += &comment("direct_reference_accesss - handle_inside_expr- end");
-
     let data_copy_register = assembly_data.get_free_register()?;
-    output_code += &(input_expr_out
-        .data
-        .context("expected input expression to output data!")?
-        .read_addr_of_last_reference_in_chain(data_copy_register, assembly_data)?
-        + &data.write_directly_to_reference_pointer(data_copy_register, assembly_data)?);
-
+    for i in 0..output_data.size {
+        output_code += &(input_data.read_register(data_copy_register, i, assembly_data)?
+            + &output_data.write_register(data_copy_register, i, assembly_data)?);
+    }
     assembly_data.mark_registers_free(&[data_copy_register]);
 
-    output_code += &comment("direct_reference_accesss - end");
     Ok(ExpressionOutput {
         code: output_code,
-        data: Some(data),
+        data: Some(output_data),
     })
 }
+
 pub fn handle_member_expression(
     left: Expression,
     right: Expression,
@@ -228,16 +228,17 @@ pub fn handle_binary_expr(
     right: Expression,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
+    let debug_data = left.debug_data().to_owned();
     let mut output_code = String::new();
     output_code += &comment("handle_binary_expr");
 
-    let debug_data = left.debug_data().to_owned();
     let output_left = handle_expr(left, assembly_data)?;
     output_code += &output_left.code;
+    assembly_data.current_var_name_for_function.clear();
 
     let output_right = handle_expr(right, assembly_data)?;
-
     output_code += &output_right.code;
+    assembly_data.current_var_name_for_function.clear();
 
     let output_register = assembly_data.get_free_register()?;
     let a_register = assembly_data.get_free_register()?;
@@ -260,43 +261,43 @@ pub fn handle_binary_expr(
     let (code_to_run, output_data_type) = match operator.value.as_str() {
         "+" => (
             &(add(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "-" => (
             &(sub(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "*" => (
             &(mul(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "/" => (
             &(div(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "%" => (
             &(modu(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         ">>" => (
             &(shr(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "<<" => (
             &(shl(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "&&" => (
             &(and(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "||" => (
             &(or(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
         "^" => (
             &(xor(a_register, b_register) + &cp(output_register, a_register)),
-            left_data.data_type.clone(),
+            left_data.data_type.unwrap_from_references().clone(),
         ),
 
         "==" => (&eq(a_register, b_register, output_register), DataType::Bool),
@@ -650,78 +651,5 @@ pub fn handle_number(value: u32, assembly_data: &mut AssemblyData) -> Result<Exp
     Ok(ExpressionOutput {
         code: output_code,
         data: Some(data),
-    })
-}
-pub fn handle_if(
-    condition: Expression,
-    inside: Vec<Expression>,
-    assembly_data: &mut AssemblyData,
-) -> Result<ExpressionOutput> {
-    assembly_data
-        .variable_code_blocks
-        .push_front(VariableCodeBlocks {
-            variables: HashMap::new(),
-            code_block_type: CodeBlockType::Inclusive,
-        });
-    let mut output_code = String::new();
-    output_code += &comment(&format!("if- condition: {condition:?}"));
-
-    let initial_stack_head_data = {
-        let alloc_out = assembly_data.allocate_stack(1)?;
-        output_code += &alloc_out.0;
-        let initial_stack_head_data = Data {
-            stack_frame_offset: alloc_out.1 as i32,
-            size: 1,
-            data_type: DataType::U32,
-        };
-        output_code +=
-            &initial_stack_head_data.write_register(STACK_HEAD_POINTER, 0, assembly_data)?;
-        initial_stack_head_data
-    };
-    let initial_offset_from_stack_base = assembly_data.current_offset_from_stack_frame_base;
-
-    let debug_data = condition.debug_data().to_owned();
-
-    output_code += &comment("if comparison");
-    output_code += &comment("if condition data");
-    let condition_data = handle_expr(condition, assembly_data)?;
-    output_code += &condition_data.code;
-
-    let condition_register = assembly_data.get_free_register()?;
-    output_code += &comment("read condition");
-    output_code += &condition_data
-        .data
-        .context("handle_if -> condition expression doesn't output any data! ")?
-        .read_register(condition_register, 0, assembly_data)?;
-
-    output_code += &not(condition_register);
-    let label_name = assembly_data.get_label_name("if");
-
-    let addr_conversion_register = assembly_data.get_free_register()?;
-    output_code += &jmpc_label(&label_name, addr_conversion_register, condition_register);
-
-    output_code += &comment("if contents");
-    assembly_data.current_var_name_for_function.clear();
-
-    for inside_expression in inside {
-        let expression_output = handle_expr(inside_expression, assembly_data)?;
-        output_code += &expression_output.code;
-    }
-
-    output_code += &comment("if contents end");
-    output_code += &label(&label_name);
-
-    // deallocate all stack used by this if's contents
-    output_code += &initial_stack_head_data.read_register(STACK_HEAD_POINTER, 0, assembly_data)?;
-    assembly_data.current_offset_from_stack_frame_base = initial_offset_from_stack_base;
-
-    assembly_data.variable_code_blocks.pop_front();
-
-    output_code += &comment("if end");
-
-    assembly_data.mark_registers_free(&[condition_register, addr_conversion_register]);
-    Ok(ExpressionOutput {
-        code: output_code,
-        data: None,
     })
 }
