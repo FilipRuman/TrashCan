@@ -64,6 +64,7 @@ pub enum Instruction {
     Pop(B8),
     Call(B8),
     Ret(),
+    IRet(B8),
 }
 
 impl From<Instruction> for B8 {
@@ -108,6 +109,7 @@ impl From<Instruction> for B8 {
             Instruction::Call(_) => B8(36),
             Instruction::Ret() => B8(37),
             Instruction::Caddr(_) => B8(38),
+            Instruction::IRet(_) => B8(39),
         }
     }
 }
@@ -155,6 +157,7 @@ impl From<B32> for Instruction {
             37 => Self::Ret(),
 
             38 => Self::Caddr(value.byte(1)),
+            39 => Self::IRet(value.byte(1)),
             index => {
                 panic!("conversion form B32 to instruction with index: {index} is not supported")
             }
@@ -471,6 +474,12 @@ impl From<Instruction> for B32 {
                     B8(0), // fill
                 ])
             }
+            Instruction::IRet(address_register) => B32::from_bytes([
+                value.into(), // command index
+                address_register,
+                B8(0), // fill
+                B8(0), // fill
+            ]),
         }
     }
 }
@@ -545,6 +554,7 @@ impl Thread {
             Instruction::Call(address_register) => self.Call(address_register, run),
             Instruction::Ret() => self.Ret(run),
             Instruction::Caddr(output_register) => self.Caddr(output_register, run),
+            Instruction::IRet(address_register) => self.Iret(address_register, run),
         }
         Ok(())
     }

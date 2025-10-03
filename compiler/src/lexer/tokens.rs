@@ -37,11 +37,11 @@ pub enum TokenKind {
     SlashEquals,
     PlusPlus,
     MinusMinus,
-        False,
+    False,
     True,
     Return,
 
-BitwiseShiftLeft,
+    BitwiseShiftLeft,
     BitwiseShiftRight,
     Plus,
     Minus,
@@ -58,6 +58,8 @@ BitwiseShiftLeft,
     Identifier,
 
     Static,
+
+    InterruptFn,
     Fn,
     Enum,
     Struct,

@@ -7,7 +7,7 @@ use super::{
     expression_handler_functions::functions::data_types::Function,
 };
 
-pub const STACK_HEAD_POINTER: u8 = 254;
+pub const STACK_HEAD_POINTER: u8 =  254;
 pub const STACK_FRAME_POINTER: u8 = 255;
 pub fn write_data_to_stack(stack_offset_register: u8, input_register: u8) -> String {
     add(stack_offset_register, STACK_FRAME_POINTER) + &write(stack_offset_register, input_register)

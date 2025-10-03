@@ -7,6 +7,7 @@ use crate::assembly_writer::{
 };
 #[derive(Clone, Debug)]
 pub struct Function {
+    pub is_interrupt_function: bool,
     pub name: String,
     pub input: Vec<FunctionInputData>,
     pub output: Option<FunctionInputData>,

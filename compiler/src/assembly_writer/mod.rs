@@ -179,137 +179,136 @@ fn handle_expr(
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
     match expression.clone() {
-        Expression::Dereference(inside,_ ) =>dereference(*inside, assembly_data), 
+        Expression::Dereference(inside,_ ) =>dereference(*inside, assembly_data),
         Expression::Break =>  handle_break(assembly_data),
         Expression::Number(value, debug_data) => handle_number(value, assembly_data),
         Expression::Boolean(value, debug_data) => handle_bool(value, assembly_data),
         Expression::String(value, debug_data) => handle_string(value, assembly_data),
         Expression::Identifier(name, debug_data) => {
-                    handle_identifier(name, assembly_data, debug_data)
-                }
+                        handle_identifier(name, assembly_data, debug_data)
+                    }
         Expression::Prefix {
-                    prefix,
-                    value,
-                    debug_data,
-                } => handle_prefix_expr(prefix,*value,assembly_data),
+                        prefix,
+                        value,
+                        debug_data,
+                    } => handle_prefix_expr(prefix,*value,assembly_data),
         Expression::Keyword(token_kind) => match token_kind {
-                    TokenKind::SemiColon => Ok(ExpressionOutput {
-                        code: "\n".to_string(),
-                        data: None,
-                    }),
-                    other => bail!(
-                        "handle_expr: encountered keyword expression with token kind {other:?}, which was not handled!"
-                    ),
-                },
+                        TokenKind::SemiColon => Ok(ExpressionOutput {
+                            code: "\n".to_string(),
+                            data: None,
+                        }),
+                        other => bail!(
+                            "handle_expr: encountered keyword expression with token kind {other:?}, which was not handled!"
+                        ),
+                    },
         Expression::Assignment {
-                    target,
-                    operator,
-                    value,
-                    debug_data,
-                } => handle_assignment(*target, operator, *value, assembly_data),
+                        target,
+                        operator,
+                        value,
+                        debug_data,
+                    } => handle_assignment(*target, operator, *value, assembly_data),
         Expression::VariableDeclaration {
-                    var_type,
-                    name,
-                    mutable,
-                    debug_data,
-                } => /* handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data) */  bail!("This should never be called. handle_assignment should have handled this. "),
+                        var_type,
+                        name,
+                        mutable,
+                        debug_data,
+                    } => /* handle_variable_declaration(var_type, name, mutable, assembly_data, debug_data) */  bail!("This should never be called. handle_assignment should have handled this. "),
         Expression::Grouping(expression, debug_data) => handle_expr(*expression, assembly_data),
         Expression::Struct {
-                    public,
-                    name,
-                    properties,
-                    functions,
-                    debug_data,
-                } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
+                        public,
+                        name,
+                        properties,
+                        functions,
+                        debug_data,
+                    } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
         Expression::StructProperty {
-                    var_name,
-                    var_type,
-                    debug_data,
-                } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
+                        var_name,
+                        var_type,
+                        debug_data,
+                    } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
         Expression::StructFunction { name, debug_data } => Ok(ExpressionOutput{ code: String::new(), data:None  }),
         Expression::Binary {
-                    left,
-                    operator,
-                    right,
-                    debug_data,
-                } => handle_binary_expr(*left, operator, *right, assembly_data),
+                        left,
+                        operator,
+                        right,
+                        debug_data,
+                    } => handle_binary_expr(*left, operator, *right, assembly_data),
         Expression::ClassInstantiation {
-                    name,
-                    properties,
-                    debug_data,
-                } => bail!("This should never be called."),
+                        name,
+                        properties,
+                        debug_data,
+                    } => bail!("This should never be called."),
         Expression::ArrayInitialization {
-                    properties,
-                    debug_data,
-                length,
-                inside_type
-                } => handle_array_initialization(inside_type,length,properties, assembly_data, debug_data),
+                        properties,
+                        debug_data,
+                    length,
+                    inside_type
+                    } => handle_array_initialization(inside_type,length,properties, assembly_data, debug_data),
         Expression::Function {
-                    name,
-                    properties,
-                    public,
-                    output,
-                    inside,
-                    debug_data,
-                } => handle_function(name, inside, assembly_data),
+                        name,
+                        properties,
+                        public,
+                        output,
+                        inside,
+                        debug_data,
+                    } => handle_function(name, inside, assembly_data),
         Expression::FunctionProperty {
-                    var_name,
-                    var_type,
-                    debug_data,
-                } => bail!(
-"This should never be called. 'handle_function_declarations' should have handled this."
-                ),
+                        var_name,
+                        var_type,
+                        debug_data,
+                    } => bail!(
+    "This should never be called. 'handle_function_declarations' should have handled this."
+                    ),
         Expression::MemberExpr {
-                    left,
-                    right,
-                    debug_data,
-                } => handle_member_expression(*left,
-                    *right,assembly_data),
+                        left,
+                        right,
+                        debug_data,
+                    } => handle_member_expression(*left,
+                        *right,assembly_data),
         Expression::Return { value, debug_data } =>handle_return(*value,assembly_data,debug_data),
         Expression::If {
-                    condition,
-                    inside,
-                    debug_data,
-                    chained_elses
-                } => handle_if(chained_elses,*condition, inside, assembly_data),
+                        condition,
+                        inside,
+                        debug_data,
+                        chained_elses
+                    } => handle_if(chained_elses,*condition, inside, assembly_data),
         Expression::Else {
-                    condition,
-                    inside,
-                    debug_data,
-                } => 
-bail!(
+                        condition,
+                        inside,
+                        debug_data,
+                    } => 
+    bail!(
 
-"This should never be called. 'handle_if' should have handled this."
-                ),
-
-
+    "This should never be called. 'handle_if' should have handled this."
+                    ),
         Expression::SquareBrackets {
-                    left,
-                    indexes,
-                    debug_data,
-                } => handle_open_square_brackets(*left, indexes, assembly_data),
+                        left,
+                        indexes,
+                        debug_data,
+                    } => handle_open_square_brackets(*left, indexes, assembly_data),
         Expression::While {
-                    condition,
-                    inside,
-                    debug_data,
-                } => handle_while_loop(*condition, inside, assembly_data),
+                        condition,
+                        inside,
+                        debug_data,
+                    } => handle_while_loop(*condition, inside, assembly_data),
         Expression::For {
-                    iterator_name,
-                    iteration_target,
-                    inside,
-                    debug_data,
-                } =>handle_for_loop(iterator_name,*iteration_target, inside, assembly_data),
+                        iterator_name,
+                        iteration_target,
+                        inside,
+                        debug_data,
+                    } =>handle_for_loop(iterator_name,*iteration_target, inside, assembly_data),
         Expression::Range {
-                    from,
-                    to,
-                    debug_data,
-                } => todo!(),
+                        from,
+                        to,
+                        debug_data,
+                    } => todo!(),
         Expression::FunctionCall {
-                    left,
-                    values,
-                    debug_data,
-                } => handle_function_call(*left, values, debug_data, assembly_data),
+                        left,
+                        values,
+                        debug_data,
+                    } => handle_function_call(*left, values, debug_data, assembly_data),
         Expression::Reference(expression, debug_data) => handle_reference(*expression,assembly_data),
         Expression::As(expression, target_type, debug_data) => handle_as(*expression,target_type,assembly_data),
+        Expression::InterruptFunction { name, property, public, inside, debug_data } =>handle_function(name,inside,assembly_data),
     }.with_context(|| format!("Handle expression: {expression:#?}"))
 }

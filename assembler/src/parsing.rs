@@ -126,6 +126,7 @@ fn parse_instruction(
                 "Push" => parse_instruction_1(&tokens, line_nr, Instruction::Push).context("Push"),
                 "Call" => parse_instruction_1(&tokens, line_nr, Instruction::Call).context("Call"),
                 "Ret" => Ok((Some(Instruction::Ret()), None)).context("Ret"),
+                "Iret"=>parse_instruction_1(&tokens, line_nr, Instruction::IRet).context("IRet"), 
 
                 not_handled_name => Err(anyhow!(
                     "instruction with name: {not_handled_name} doesn't exist / is not currently handled. line: {line_nr}"

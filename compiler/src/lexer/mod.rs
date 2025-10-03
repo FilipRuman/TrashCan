@@ -328,6 +328,7 @@ pub fn reserved_symbols() -> HashMap<String, TokenKind> {
         ("break".to_string(), TokenKind::Break),
         ("as".to_string(), TokenKind::As),
         ("import".to_string(), TokenKind::Import),
+        ("interrupt_fn".to_string(), TokenKind::InterruptFn),
         ("fn".to_string(), TokenKind::Fn),
         ("in".to_string(), TokenKind::In),
         ("if".to_string(), TokenKind::If),

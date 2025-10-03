@@ -2,8 +2,8 @@ pub mod data_types;
 
 use crate::assembly_writer::{
     core_functions::{
-        access_static_variable, create_static_variable, direct_reference_access, free, malloc,
-        mark, memory_access,
+        self, access_static_variable, create_static_variable, direct_reference_access, free, idt,
+        malloc, mark, memory_access, read_addr_of_function,
     },
     data_types::FunctionInputData,
 };
@@ -31,20 +31,22 @@ pub fn handle_return(
         .current_function_data_for_return
         .clone()
         .context("")?;
+
     let function = assembly_data.find_function(&function_data.name)?.clone();
 
     let mut output_code = String::new();
     output_code += &comment("Return");
-    let expr_output = handle_expr(value, assembly_data)?;
-    output_code += &expr_output.code;
-    verify_function_output_with_return(function.output.to_owned(), expr_output.data.to_owned())
-        .with_context(|| format!("{debug_data:?}"))?;
+    if !function.is_interrupt_function {
+        let expr_output = handle_expr(value, assembly_data)?;
+        output_code += &expr_output.code;
+        verify_function_output_with_return(function.output.to_owned(), expr_output.data.to_owned())
+            .with_context(|| format!("{debug_data:?}"))?;
 
-    // write to output variable on stack
-    if let Some(target_output) = function.output.to_owned() {
-        output_code += &target_output.assign(&expr_output.data.unwrap(), assembly_data)?;
+        // write to output variable on stack
+        if let Some(target_output) = function.output.to_owned() {
+            output_code += &target_output.assign(&expr_output.data.unwrap(), assembly_data)?;
+        }
     }
-
     let jump_back_addr_register = assembly_data.get_free_register()?;
     output_code += &cp(jump_back_addr_register, STACK_FRAME_POINTER);
 
@@ -52,7 +54,6 @@ pub fn handle_return(
     output_code += &cp(STACK_HEAD_POINTER, STACK_FRAME_POINTER);
 
     // go back to stack frame of parent function
-    //
     let initial_stack_frame_register = assembly_data.get_free_register()?;
     output_code += &function_data.initial_stack_frame_data.read_register(
         initial_stack_frame_register,
@@ -63,14 +64,19 @@ pub fn handle_return(
     output_code += &cp(STACK_FRAME_POINTER, initial_stack_frame_register);
 
     // read return addr + jmp to it
-    output_code +=
-        &(read(jump_back_addr_register, jump_back_addr_register) + &jmp(jump_back_addr_register));
+    output_code += &(read(jump_back_addr_register, jump_back_addr_register));
+    output_code += &if function.is_interrupt_function {
+        iret(jump_back_addr_register)
+    } else {
+        jmp(jump_back_addr_register)
+    };
     assembly_data.mark_registers_free(&[jump_back_addr_register, initial_stack_frame_register]);
     Ok(ExpressionOutput {
         code: output_code,
         data: None,
     })
 }
+
 pub fn handle_function_declarations(
     expressions: &Vec<Expression>,
     assembly_data: &mut AssemblyData,
@@ -78,67 +84,85 @@ pub fn handle_function_declarations(
     for expression in expressions {
         if let Expression::Function {
             name,
-            properties: input_types,
+            properties,
             public: _,
-            output: output_type,
+            output,
             inside: _,
             debug_data: _,
         } = expression
         {
-            // -1 because the start of the stack frame will be address that you need to jump back to.
-            let mut current_stack_offset = -1;
-            let mut input = Vec::with_capacity(input_types.len());
-            for input_expression in input_types {
-                let (input_type, var_name) = if let Expression::FunctionProperty {
-                    var_name,
-                    var_type,
-                    debug_data: _,
-                } = input_expression
-                {
-                    (var_type.clone(), var_name.to_owned())
-                } else {
-                    bail!("expected function property!");
-                };
-
-                let data_type = DataType::parse_type(input_type, assembly_data)?;
-
-                current_stack_offset -= data_type.size(assembly_data)? as i32;
-                input.push(FunctionInputData {
-                    name: var_name.to_owned(),
-                    data_type,
-                    stack_frame_offset: current_stack_offset,
-                });
-            }
-            let output_data: Option<FunctionInputData> = {
-                if output_type.is_none() {
-                    None
-                } else {
-                    let data_type = DataType::parse_type(
-                        output_type.as_ref().unwrap().to_owned(),
-                        assembly_data,
-                    )?;
-
-                    current_stack_offset -= data_type.size(assembly_data)? as i32;
-                    Some(FunctionInputData {
-                        name: name.to_owned(),
-                        data_type,
-                        stack_frame_offset: current_stack_offset,
-                    })
-                }
-            };
-
-            let label_name = assembly_data.get_label_name(&format!("function_{name}_"));
-            assembly_data.functions.insert(
-                name.to_owned(),
-                Function {
-                    name: name.to_owned(),
-                    input,
-                    output: output_data,
-                    label_name,
-                },
-            );
+            function_declaration(assembly_data, false, name, properties, output)?;
+        } else if let Expression::InterruptFunction {
+            name,
+            property,
+            public: _,
+            inside: _,
+            debug_data: _,
+        } = expression
+        {
+            function_declaration(assembly_data, true, name, &vec![*property.clone()], &None)?;
         }
     }
+    Ok(())
+}
+
+fn function_declaration(
+    assembly_data: &mut AssemblyData,
+    is_interrupt_function: bool,
+    name: &String,
+    input_types: &Vec<Expression>,
+    output_type: &Option<crate::parser::types::Type>,
+) -> Result<(), anyhow::Error> {
+    let mut current_stack_offset = -1;
+    let mut input = Vec::with_capacity(input_types.len());
+    for input_expression in input_types {
+        let (input_type, var_name) = if let Expression::FunctionProperty {
+            var_name,
+            var_type,
+            debug_data: _,
+        } = input_expression
+        {
+            (var_type.clone(), var_name.to_owned())
+        } else {
+            bail!("expected function property!");
+        };
+
+        let data_type = DataType::parse_type(input_type, assembly_data)?;
+
+        current_stack_offset -= data_type.size(assembly_data)? as i32;
+        input.push(FunctionInputData {
+            name: var_name.to_owned(),
+            data_type,
+            stack_frame_offset: current_stack_offset,
+        });
+    }
+    let output_data: Option<FunctionInputData> = {
+        if output_type.is_none() {
+            None
+        } else {
+            let data_type =
+                DataType::parse_type(output_type.as_ref().unwrap().to_owned(), assembly_data)?;
+
+            current_stack_offset -= data_type.size(assembly_data)? as i32;
+            Some(FunctionInputData {
+                name: name.to_owned(),
+                data_type,
+                stack_frame_offset: current_stack_offset,
+            })
+        }
+    };
+
+    let label_name = assembly_data.get_label_name(&format!("function_{name}_"));
+    assembly_data.functions.insert(
+        name.to_owned(),
+        Function {
+            is_interrupt_function,
+            name: name.to_owned(),
+            input,
+            output: output_data,
+            label_name,
+        },
+    );
     Ok(())
 }
 
@@ -167,6 +191,7 @@ fn verify_function_output_with_return(
 
     Ok(())
 }
+
 pub fn handle_function(
     name: String,
     inside: Vec<Expression>,
@@ -479,6 +504,18 @@ pub fn handle_core_function_call(
         "mark" => {
             expect_input_len(values, 1).context("mark")?;
             Ok(Some(mark(values[0].to_owned(), assembly_data)?))
+        }
+        "read_addr_of_function" => {
+            expect_input_len(values, 1).context("read_addr_of_function")?;
+            Ok(Some(read_addr_of_function(
+                values[0].to_owned(),
+                assembly_data,
+            )?))
+        }
+
+        "idt" => {
+            expect_input_len(values, 1).context("idt")?;
+            Ok(Some(idt(values[0].to_owned(), assembly_data)?))
         }
         "access_reference" => {
             expect_input_len(values, 1).context("access_reference")?;

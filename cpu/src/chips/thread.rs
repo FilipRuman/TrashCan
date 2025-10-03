@@ -11,6 +11,7 @@ use std::{
     },
     time::Duration,
 };
+use tokio::time::sleep;
 
 use crate::{
     MEMORY, SHOW_INSTRUCTION_FETCHING_DEBUG,
@@ -70,21 +71,62 @@ impl InterruptController {
         self.interrupts.push(interrupt);
     }
 
-    pub fn get_interrupt_instruction(&self) -> Option<Instruction> {
+    pub fn get_interrupt_instruction(&self, thread: &Thread) -> Option<Instruction> {
         if self.interrupts_enabled.load(ORDERING) && self.interrupted.load(ORDERING) {
-            let interrupt =self.interrupts.pop().expect("there was not a interrupt in the interrupts array que even tho `interrupted` bool was true");
+            self.interrupted.store(false, ORDERING);
+            self.interrupts_enabled.store(false, ORDERING);
+
+            let interrupt =self.interrupts.pop().expect("there was not a interrupt in the interrupts array que, but `interrupted` bool was  set to true");
             let interrupt_function_pointer = self.IDT.base_addr.load(ORDERING) + interrupt as u32;
             let memory = MEMORY
                 .get()
                 .expect("gui loop run before init function or memory was not yet initialized");
-            let iterrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
+            let interrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
+            // -1 because jmp instruction advances instruction addr by 1
+            let current_addr = thread.pc.read() - B32(1);
+            info!(
+                "get_interrupt_instruction- instruction: {}",
+                interrupt_function_addr
+            );
 
-            todo!();
-            return Some(Instruction::Call(todo!()));
+            let current_data = 321;
+
+            let stack_head = thread.registers.read(STACK_HEAD_REGISTER);
+            thread
+                .registers
+                .write(stack_head + B32(0), CPU_REGISTER_2, true);
+            thread
+                .registers
+                .write(B32(current_data as u32), CPU_REGISTER_1, true);
+            thread.Write(CPU_REGISTER_2, CPU_REGISTER_1, true);
+
+            info!("get_interrupt_instruction- current addr: {}", current_addr);
+            thread
+                .registers
+                .write(stack_head + B32(2), CPU_REGISTER_2, true);
+            thread.registers.write(current_addr, CPU_REGISTER_1, true);
+            thread.Write(CPU_REGISTER_2, CPU_REGISTER_1, true);
+
+            thread
+                .registers
+                .write(stack_head + B32(2), STACK_HEAD_REGISTER, true);
+
+            thread
+                .registers
+                .write(interrupt_function_addr, CPU_REGISTER_1, true);
+            return Some(Instruction::Jmp(CPU_REGISTER_1));
         }
         None
     }
+
+    fn end_interrupt(&self) {
+        self.interrupts_enabled.store(true, ORDERING);
+    }
 }
+pub const STACK_HEAD_REGISTER: B8 = B8(254);
+pub const STACK_FRAME_REGISTER: B8 = B8(255);
+pub const CPU_REGISTER_1: B8 = B8(253);
+pub const CPU_REGISTER_2: B8 = B8(252);
 pub struct Thread {
     pub interrupt_controller: InterruptController,
     pub pc: Counter,
@@ -94,7 +136,12 @@ pub struct Thread {
 }
 impl Thread {
     pub async fn run_loop(&self) -> Result<()> {
-        while !self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
+        loop {
+            if self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
+                sleep(Duration::from_millis(1));
+                continue;
+            }
+
             let instruction = self.fetch_instruction();
             if SHOW_INSTRUCTION_FETCHING_DEBUG {
                 info!("pc-address: {}", self.pc.read());
@@ -114,7 +161,7 @@ impl Thread {
 
     fn fetch_instruction(&self) -> Instruction {
         // could use mux because i can convert instruction into B32 but this is simpler
-        match self.interrupt_controller.get_interrupt_instruction() {
+        match self.interrupt_controller.get_interrupt_instruction(self) {
             Some(interrupt_instruction) => interrupt_instruction,
             None => self.read_instruction_form_current_pc_memory(),
         }
@@ -132,15 +179,15 @@ pub async fn clock_cycle(thread: &Thread) {
         .get()
         .expect("gui loop run before init function or memory was not yet initialized");
     loop {
-        tokio::time::sleep(Duration::from_millis(1)).await;
-        thread
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        if thread
             .interrupt_controller
-            .interrupted
-            .store(true, ORDERING);
-        thread
-            .interrupt_controller
-            .interrupts
-            .push(Interrupt::Timer);
+            .interrupts_enabled
+            .load(ORDERING)
+        {
+            thread.interrupt_controller.interrupt(Interrupt::Timer);
+            thread.is_halting.store(false, ORDERING);
+        }
     }
 }
 pub fn spawn_threads(thread_count: usize) {

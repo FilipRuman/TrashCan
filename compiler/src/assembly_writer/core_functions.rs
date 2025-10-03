@@ -20,6 +20,58 @@ pub fn mark(expr: Expression, assembly_data: &mut AssemblyData) -> Result<Expres
         data: None,
     })
 }
+pub fn read_addr_of_function(
+    input_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let alloc_out = assembly_data.allocate_stack(1)?;
+
+    let addr_register = assembly_data.get_free_register()?;
+    output_code += &alloc_out.0;
+    let data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::U32,
+    };
+    let function_name = if let Expression::String(value, _) = input_expr {
+        value.split_at(1).1.to_owned()
+    } else {
+        bail!("expected input expression to be a string - name of the function!");
+    };
+    let function_label = assembly_data.find_function(&function_name)?;
+
+    output_code += &set_label(addr_register, &function_label.label_name);
+    output_code += &data.write_register(addr_register, 0, assembly_data)?;
+
+    assembly_data.mark_registers_free(&[addr_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(data),
+    })
+}
+
+pub fn idt(input_expr: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let expr_out = handle_expr(input_expr, assembly_data)?;
+    output_code += &expr_out.code;
+
+    let data = expr_out
+        .data
+        .context("expected input expression to output data")?;
+    let data_copy_register = assembly_data.get_free_register()?;
+    if data.data_type == DataType::U32 {
+        output_code += &(data.read_register(data_copy_register, 0, assembly_data)?
+            + &assembly_instructions::idt(data_copy_register));
+    } else {
+        bail!("expected input expression to output data of type 'U32'")
+    }
+    assembly_data.mark_registers_free(&[data_copy_register]);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
+}
 
 pub fn direct_reference_access(
     input_expr: Expression,

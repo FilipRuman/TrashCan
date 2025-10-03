@@ -197,7 +197,7 @@ impl Data {
     pub fn write_register(
         &self,
         input_register: u8,
-        write_offet: u32,
+        write_offset: u32,
         assembly_data: &mut AssemblyData,
     ) -> Result<String> {
         let mut output_code = String::new();
@@ -205,7 +205,7 @@ impl Data {
 
         let offset_register = assembly_data.get_free_register()?;
         let index_register = assembly_data.get_free_register()?;
-        output_code += &(set(index_register, write_offet));
+        output_code += &(set(index_register, write_offset));
 
         let mut current_data_type = &self.data_type;
 
@@ -429,14 +429,14 @@ impl Data {
     pub fn read_register(
         &self,
         output_register: u8,
-        read_offet: u32,
+        read_offset: u32,
         assembly_data: &mut AssemblyData,
     ) -> Result<String> {
-        if self.size < read_offet {
+        if self.size < read_offset {
             bail!(
                 "you tried to read outside of the variable size: {}  index: {} variable: {:?} ",
                 self.size,
-                read_offet,
+                read_offset,
                 self
             )
         }
@@ -446,7 +446,7 @@ impl Data {
 
         let offset_register = assembly_data.get_free_register()?;
         let index_register = assembly_data.get_free_register()?;
-        output_code += &(set(index_register, read_offet));
+        output_code += &(set(index_register, read_offset));
 
         let mut current_data_type = &self.data_type;
 

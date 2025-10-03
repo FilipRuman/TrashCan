@@ -1,7 +1,6 @@
-//  TODO: Implement: hardware interrupts , paging, graphics rendering, peripheral input. 
+//  TODO: Implement: hardware interrupts, peripheral input , paging, graphics rendering,. 
 struct HeapBlock{
 	next: &HeapBlock,
-
 }
 //struct Vec {
 //	size: u32,
@@ -25,24 +24,30 @@ create_static(10,"max_heap_size_pow_2")
 
 
 create_static( {&HeapBlock, len :8}, "free_heap_blocks_linked_lists");
-let alloc = malloc(5555);
-let alloc3 = malloc(5555);
-let alloc4 = malloc(5555);
-free(alloc);
-free(alloc3);
-free(alloc4);
-let alloc2 = malloc(5555);
-let alloc5 = malloc(5555);
-let alloc6 = malloc(5555);
-free(alloc2);
+// allocate 4 registers
+let idt_addr = *access_reference(malloc({u32, len: 3}));
+mem(idt_addr) =  read_addr_of_function("timer_interrupt");
+idt(idt_addr);
 
-
+while true{
+	print("timer loop");
+	halt();
+}
 
 //access_reference();
 //access_reference(malloc(45));
 //access_reference(malloc(45));
 
-halt();
+
+
+
+interrupt_fn timer_interrupt(data:u32){
+	print_raw(data);
+	return ;
+}
+
+
+
 fn core_deallocate(addr:u32,size_raw: u32){
 	let size_log2= ceil_log2(size_raw);
 	let min = access_static("min_heap_size_pow_2");

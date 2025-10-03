@@ -193,6 +193,61 @@ pub fn parse_range(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expr
         debug_data: parser.get_current_debug_data()?,
     })
 }
+pub fn parse_interrupt_function(parser: &mut Parser) -> Result<Expression> {
+    parser.expect(&TokenKind::InterruptFn)?;
+
+    let public = if parser.current_token_kind()? == &TokenKind::Pub {
+        parser.expect(&TokenKind::Pub)?;
+        true
+    } else {
+        false
+    };
+
+    let name = parser.expect(&TokenKind::Identifier)?.value.to_owned();
+    parser.expect(&TokenKind::OpenParen)?;
+
+    let var_name = parser.expect(&TokenKind::Identifier)?.value.to_owned();
+    parser.expect(&TokenKind::Colon)?;
+    let var_type = parse_type(parser, &0).with_context(|| {
+        format!(
+            "parsing property types inside function: {:?}",
+            parser.get_current_debug_data()
+        )
+    })?;
+    let property = Expression::FunctionProperty {
+        var_name,
+        var_type,
+
+        debug_data: parser.get_current_debug_data()?,
+    };
+    if parser.current_token_kind()? == &TokenKind::Comma {
+        parser.advance()?;
+    }
+
+    parser.expect(&TokenKind::CloseParen)?;
+    parser.expect(&TokenKind::OpenCurly)?;
+    let mut inside = Vec::new();
+    while parser.current_token_kind()? != &TokenKind::CloseCurly {
+        inside.push(parse_expr(parser, &0).with_context(|| {
+            format!(
+                "parsing expressions inside function: {:?}",
+                parser.get_current_debug_data()
+            )
+        })?);
+    }
+
+    parser.expect(&TokenKind::CloseCurly)?;
+
+    Ok(Expression::InterruptFunction {
+        name,
+        property: Box::new(property),
+        public,
+        inside,
+
+        debug_data: parser.get_current_debug_data()?,
+    })
+}
+
 pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
     parser.expect(&TokenKind::Fn)?;
 
@@ -239,7 +294,7 @@ pub fn parse_function(parser: &mut Parser) -> Result<Expression> {
     while parser.current_token_kind()? != &TokenKind::CloseCurly {
         inside.push(parse_expr(parser, &0).with_context(|| {
             format!(
-                "parsing expresions inside function: {:?}",
+                "parsing expressions inside function: {:?}",
                 parser.get_current_debug_data()
             )
         })?);

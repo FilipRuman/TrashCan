@@ -2,6 +2,10 @@ pub fn comment(text: &str) -> String {
     format!("// {}\n", text.replace("\n", "\n //"))
 }
 
+pub fn idt(register: u8) -> String {
+    format!("Idt r{register}\n")
+}
+
 /// Copies value from `x` register into `y` register.
 pub fn cp(destination_register: u8, source_register: u8) -> String {
     format!("Cp r{destination_register} , r{source_register}\n")
@@ -21,6 +25,9 @@ pub fn read(destination_register: u8, address_register: u8) -> String {
 /// Writes value from `y` to memory at address in `x`.
 pub fn write(destination_address_register: u8, source_register: u8) -> String {
     format!("Write r{destination_address_register} , r{source_register}\n")
+}
+pub fn iret(address_register: u8) -> String {
+    format!("Iret r{address_register}\n")
 }
 pub fn jmp(address_register: u8) -> String {
     format!("Jmp r{address_register}\n")

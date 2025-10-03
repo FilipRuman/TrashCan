@@ -9,7 +9,7 @@ use chips::{
     b32::B32,
     bit::{mux_8, nand},
     memory::RAM::{ram8::RAM8, ram32k::RAM32k, ram256k::RAM256k, ram512::RAM512},
-    thread::{self, instructions::Instruction},
+    thread::{self, clock_cycle, instructions::Instruction},
 };
 
 pub mod chips;
@@ -61,7 +61,10 @@ pub async fn init() -> Result<()> {
 
     thread::spawn_threads(args.threads);
 
-    tokio::spawn(thread::THREADS.get().unwrap()[0].run_loop());
+    let thread = &thread::THREADS.get().unwrap()[0];
+
+    tokio::spawn(clock_cycle(thread));
+    tokio::spawn(thread.run_loop());
     Ok(())
 }
 pub async fn load_memory_from_file(path: &str, memory_load_base_addr: B32) -> Result<()> {

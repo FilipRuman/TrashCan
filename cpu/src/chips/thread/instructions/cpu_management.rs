@@ -5,7 +5,7 @@ use tokio::time::sleep;
 
 use crate::{
     B8,
-    chips::thread::{ORDERING, THREADS, Thread},
+    chips::thread::{ORDERING, THREADS, Thread, clock_cycle},
     peripherals::call_peripheral,
 };
 
@@ -53,6 +53,8 @@ impl Thread {
         let start_address = self.registers.read(start_address_register);
         let thread = &THREADS.get().unwrap()[thread_index.0 as usize];
         thread.pc.set(start_address, run);
+
+        tokio::spawn(clock_cycle(thread));
         tokio::spawn(thread.run_loop());
         Ok(())
     }
@@ -64,7 +66,17 @@ impl Thread {
             .interrupt(interrupt_type.0.try_into().unwrap());
     }
     const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;
+    pub fn Iret(&self, address_register: B8, run: bool) {
+        info!(
+            "Iret, jmp_address: {}",
+            self.registers.read(address_register)
+        );
+        self.Jmp(address_register, run);
+        self.interrupt_controller.end_interrupt();
+    }
     pub fn Idt(&self, address_register: B8, run: bool) {
+        info!("run idt");
+
         let base_addr = self.registers.read(address_register);
         self.interrupt_controller
             .IDT
@@ -73,6 +85,8 @@ impl Thread {
         self.interrupt_controller
             .interrupts_enabled
             .store(true, ORDERING);
+        self.interrupt_controller
+            .interrupt(crate::chips::thread::Interrupt::Timer);
         true;
     }
     pub async fn Phrp(&self, index_register: B8, data_register: B8, run: bool) -> Result<()> {
