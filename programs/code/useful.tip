@@ -1,0 +1,14 @@
+fn print(text: &u32[]){
+
+	let text_len = text.len();
+	for i in 0..text_len{
+		print_raw(text[i]);
+	}
+	print_raw("\n");
+	return ;
+}
+fn panic(text:&u32[]){
+	print(text);
+	halt();
+	return ;
+}

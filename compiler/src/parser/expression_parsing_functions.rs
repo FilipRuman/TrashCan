@@ -4,6 +4,14 @@ use log::info;
 
 use super::{Parser, expression::*, types::parse_type};
 
+pub fn parse_include(parser: &mut Parser) -> Result<Expression> {
+    parser.expect(&TokenKind::Include)?;
+    let token = parser.expect(&TokenKind::String)?.clone();
+    parser
+        .files_to_include
+        .push(token.value.split_at(1).1.to_string());
+    Ok(Expression::Skip)
+}
 pub fn parse_indexing_array(parser: &mut Parser, _: &i8, left: Expression) -> Result<Expression> {
     parser.expect(&TokenKind::OpenBracket)?;
     let mut indexes = Vec::new();

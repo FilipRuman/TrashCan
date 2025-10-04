@@ -1,51 +1,12 @@
-//  TODO: Implement: hardware interrupts, peripheral input , paging, graphics rendering,. 
-struct HeapBlock{
-	next: &HeapBlock,
-}
-//struct Vec {
-//	size: u32,
-//	addr: u32,
-//}
-
 // INFO: For memory allocation: 
 //To find if memory is allocated do: use hash function- it will be a simple thing like juts multiply the addr by some value and then mod the output by the size of hashmap. 
 // that way you get a index in array, than you can check if addr of this thing is good, if not look to the child node. if nothing matches this addr is fre.
 // this will be useful for defragmentation 
 
 
-// Some mistakes were made during making of this lang...
-
-create_static( 9000,"heap_start");
-create_static(*access_static("heap_start"),"heap_main_pool_head");
-create_static( 30000,"heap_end");
-
-create_static(2,"min_heap_size_pow_2")
-create_static(10,"max_heap_size_pow_2")
-
-
-create_static( {&HeapBlock, len :8}, "free_heap_blocks_linked_lists");
-// allocate 4 registers
-let idt_addr = *access_reference(malloc({u32, len: 3}));
-mem(idt_addr) =  read_addr_of_function("timer_interrupt");
-idt(idt_addr);
-
-while true{
-	print("timer loop");
-	halt();
+struct HeapBlock{
+	next: &HeapBlock,
 }
-
-//access_reference();
-//access_reference(malloc(45));
-//access_reference(malloc(45));
-
-
-
-
-interrupt_fn timer_interrupt(data:u32){
-	print_raw(data);
-	return ;
-}
-
 
 
 fn core_deallocate(addr:u32,size_raw: u32){
@@ -125,56 +86,4 @@ fn ceil_log2(x: u32) -> u32 {
 	}
 	return i;
 }
-
-
-fn panic(text:&u32[]){
-	print(text);
-	halt();
-	return ;
-}
-
-//fn core_deallocate(address: u32,size: u32){
-//	return ;
-//}
-
-//fn next_power_of_two(n: u32) -> u32 {
-//	if n ==0 {
-//		return 1;
-// 	}
-// 	n -= 1;
-// 	n = n|| (n >> 1);
-// 	n = n|| (n >> 2);
-// 	n = n|| (n >> 4);
-// 	n = n|| (n >> 8);
-// 	n = n|| (n >> 16);
-// 	return n + 1;
-//}
-
-
-
-//fn u32_to_string(val : u32) -> u32[9]{
-//	let out ={u32,len: 9,};
-//	let div  = 10;
-//	let i = 0;
-//	while val > 0{
-//		let mod = val % div;
-//		val -= mod * (div / 10);
-//		out[i] = mod+48;
-//		div *= 10;
-//		i += 1;
-//	}
-//		
-//	return out;
-//}
-//
-fn print(text: &u32[]){
-
-	let text_len = text.len();
-	for i in 0..text_len{
-		print_raw(text[i]);
-	}
-	print_raw("\n");
-	return ;
-}
-
 

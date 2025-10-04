@@ -14,6 +14,7 @@ pub mod type_lookup;
 pub mod types;
 
 pub struct Parser {
+    pub files_to_include: Vec<String>,
     pub index: usize,
     pub tokens: Vec<Token>,
     pub lookup: Lookup,
@@ -29,6 +30,7 @@ impl Parser {
     }
     pub fn new(tokens: Vec<Token>) -> Parser {
         Parser {
+            files_to_include: vec![],
             index: 0,
             tokens,
             lookup: Lookup::new(),
@@ -76,7 +78,11 @@ impl Parser {
         bail!("Expected: {:?} but found: {:?} ", expected, current);
     }
 }
-pub fn parse(tokens: Vec<Token>) -> Result<Vec<Expression>> {
+pub struct ParserOutput {
+    pub expressions: Vec<Expression>,
+    pub files_to_include: Vec<String>,
+}
+pub fn parse(tokens: Vec<Token>) -> Result<ParserOutput> {
     let mut parser = Parser::new(tokens);
 
     let mut parsed_lines: Vec<Expression> = Vec::new();
@@ -85,5 +91,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Expression>> {
         parsed_lines.push(parse_expr(&mut parser, &0)?);
     }
 
-    Ok(parsed_lines)
+    Ok(ParserOutput {
+        expressions: parsed_lines,
+        files_to_include: parser.files_to_include,
+    })
 }

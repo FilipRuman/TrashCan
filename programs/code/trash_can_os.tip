@@ -1,0 +1,9 @@
+//order of including files is top to bottom  
+
+include "useful.tip"
+include "allocator.tip"
+include "interrupt_handlers.tip"
+include "init_code.tip"
+
+//  TODO: Implement: graphics rendering, paging,. 
+

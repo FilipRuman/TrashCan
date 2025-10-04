@@ -333,6 +333,7 @@ pub fn reserved_symbols() -> HashMap<String, TokenKind> {
         ("in".to_string(), TokenKind::In),
         ("if".to_string(), TokenKind::If),
         ("else".to_string(), TokenKind::Else),
+        ("include".to_string(), TokenKind::Include),
         ("for".to_string(), TokenKind::For),
         ("while".to_string(), TokenKind::While),
         ("return".to_string(), TokenKind::Return),

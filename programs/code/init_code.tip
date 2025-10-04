@@ -1,0 +1,20 @@
+create_static( 9000,"heap_start");
+create_static(*access_static("heap_start"),"heap_main_pool_head");
+create_static( 30000,"heap_end");
+
+create_static(2,"min_heap_size_pow_2")
+create_static(10,"max_heap_size_pow_2")
+
+
+create_static( {&HeapBlock, len :8}, "free_heap_blocks_linked_lists");
+// allocate 4 registers
+let idt_addr = *access_reference(malloc({u32, len: 3}));
+mem(idt_addr) =  read_addr_of_function("timer_interrupt");
+mem(idt_addr +1) =  read_addr_of_function("keyboard_interrupt");
+idt(idt_addr);
+
+while true{
+	//print("timer loop");
+	halt();
+}
+

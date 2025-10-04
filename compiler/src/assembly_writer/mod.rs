@@ -179,6 +179,8 @@ fn handle_expr(
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
     match expression.clone() {
+
+            Expression::Skip => {Ok(ExpressionOutput{ code: String::new(), data: None })},
         Expression::Dereference(inside,_ ) =>dereference(*inside, assembly_data),
         Expression::Break =>  handle_break(assembly_data),
         Expression::Number(value, debug_data) => handle_number(value, assembly_data),

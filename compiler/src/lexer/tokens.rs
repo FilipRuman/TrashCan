@@ -68,6 +68,7 @@ pub enum TokenKind {
     New,
     Import,
     For,
+    Include,
     In,
     If,
     Else,

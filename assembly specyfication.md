@@ -273,8 +273,3 @@ Generates a random 32-bit number in range `y` - `z` and stores it in `x`.
 ## Special registers:
 255 -> Stack frame pointer
 254 -> Stack head pointer
-
-
-
-
-

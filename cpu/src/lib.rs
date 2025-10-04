@@ -33,15 +33,18 @@ struct Args {
     threads: usize,
 }
 
-pub async fn main() -> Result<()> {
-    if let Err(err) = init().await.context("encountered error while running CPU:") {
+pub async fn main(binary_file_to_load_addr: &str) -> Result<()> {
+    if let Err(err) = init(binary_file_to_load_addr)
+        .await
+        .context("encountered error while running CPU:")
+    {
         error::handle_error(err);
     }
 
     Ok(())
 }
 
-pub async fn init() -> Result<()> {
+pub async fn init(binary_file_to_load_addr: &str) -> Result<()> {
     let args = Args::parse();
 
     info!("init memory");
@@ -51,7 +54,7 @@ pub async fn init() -> Result<()> {
     info!("initialized memory: {:?}", elapsed);
 
     let start_addr = B32(0);
-    load_memory_from_file("./programs/test.bin", start_addr).await?;
+    load_memory_from_file(&binary_file_to_load_addr, start_addr).await?;
 
     thread::spawn_threads(args.threads);
 

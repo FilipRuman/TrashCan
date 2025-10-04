@@ -1,0 +1,9 @@
+interrupt_fn keyboard_interrupt(data:u32){
+	print_raw(data);
+	return ;
+}
+
+interrupt_fn timer_interrupt(data:u32){
+	print_raw(data);
+	return ;
+}

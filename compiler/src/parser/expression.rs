@@ -9,6 +9,7 @@ pub struct DebugData {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
+    Skip,
     As(Box<Expression>, Type, DebugData),
     Dereference(Box<Expression>, DebugData),
     Reference(Box<Expression>, DebugData),
@@ -161,6 +162,7 @@ pub enum Expression {
 impl Expression {
     pub fn debug_data(&self) -> &DebugData {
         match self {
+            Expression::Skip => todo!(),
             Expression::InterruptFunction {
                 name: _,
                 property: _,
