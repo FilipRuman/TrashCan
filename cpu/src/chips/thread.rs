@@ -30,25 +30,30 @@ use super::b8::B8;
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Interrupt {
+pub enum InterruptKind {
     Timer = 0,
     Keyboard = 1,
     Mouse = 2,
 }
-impl From<Interrupt> for u32 {
-    fn from(val: Interrupt) -> Self {
+impl From<InterruptKind> for u32 {
+    fn from(val: InterruptKind) -> Self {
         val as u32
     }
 }
 
-impl TryFrom<u32> for Interrupt {
+#[derive(Debug)]
+pub struct Interrupt {
+    pub kind: InterruptKind,
+    pub data: u32,
+}
+impl TryFrom<u32> for InterruptKind {
     type Error = anyhow::Error;
 
     fn try_from(val: u32) -> Result<Self, Self::Error> {
         match val {
-            1 => Ok(Interrupt::Timer),
-            2 => Ok(Interrupt::Keyboard),
-            3 => Ok(Interrupt::Mouse),
+            1 => Ok(InterruptKind::Timer),
+            2 => Ok(InterruptKind::Keyboard),
+            3 => Ok(InterruptKind::Mouse),
             _ => Err(anyhow!("{val} was not a valid interrupt type index!")),
         }
     }
@@ -60,36 +65,23 @@ pub struct IDT {
 
 pub struct InterruptController {
     pub interrupts_enabled: AtomicBool,
-    pub interrupted: AtomicBool,
     pub interrupts: ArrayQueue<Interrupt>,
     pub IDT: IDT,
 }
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;
 impl InterruptController {
-    pub fn interrupt(&self, interrupt: Interrupt) {
-        self.interrupted.store(true, ORDERING);
-        self.interrupts.push(interrupt);
-    }
-
     pub fn get_interrupt_instruction(&self, thread: &Thread) -> Option<Instruction> {
-        if self.interrupts_enabled.load(ORDERING) && self.interrupted.load(ORDERING) {
-            self.interrupted.store(false, ORDERING);
+        if let Some(interrupt) = self.interrupts.pop()
+            && self.interrupts_enabled.load(ORDERING)
+        {
             self.interrupts_enabled.store(false, ORDERING);
 
-            let interrupt =self.interrupts.pop().expect("there was not a interrupt in the interrupts array que, but `interrupted` bool was  set to true");
-            let interrupt_function_pointer = self.IDT.base_addr.load(ORDERING) + interrupt as u32;
-            let memory = MEMORY
-                .get()
-                .expect("gui loop run before init function or memory was not yet initialized");
+            let interrupt_function_pointer =
+                self.IDT.base_addr.load(ORDERING) + interrupt.kind as u32;
+            let memory = MEMORY.get().expect("memory was not yet initialized");
             let interrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
             // -1 because jmp instruction advances instruction addr by 1
             let current_addr = thread.pc.read() - B32(1);
-            info!(
-                "get_interrupt_instruction- instruction: {}",
-                interrupt_function_addr
-            );
-
-            let current_data = 321;
 
             let stack_head = thread.registers.read(STACK_HEAD_REGISTER);
             thread
@@ -97,10 +89,9 @@ impl InterruptController {
                 .write(stack_head + B32(0), CPU_REGISTER_2, true);
             thread
                 .registers
-                .write(B32(current_data as u32), CPU_REGISTER_1, true);
+                .write(B32(interrupt.data), CPU_REGISTER_1, true);
             thread.Write(CPU_REGISTER_2, CPU_REGISTER_1, true);
 
-            info!("get_interrupt_instruction- current addr: {}", current_addr);
             thread
                 .registers
                 .write(stack_head + B32(2), CPU_REGISTER_2, true);
@@ -135,6 +126,10 @@ pub struct Thread {
     stack_base_addr: B32,
 }
 impl Thread {
+    pub fn interrupt(&self, interrupt: Interrupt) {
+        self.interrupt_controller.interrupts.push(interrupt);
+        self.is_halting.store(false, ORDERING);
+    }
     pub async fn run_loop(&self) -> Result<()> {
         loop {
             if self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
@@ -178,15 +173,19 @@ pub async fn clock_cycle(thread: &Thread) {
     let memory = MEMORY
         .get()
         .expect("gui loop run before init function or memory was not yet initialized");
+    let mut not_very_accurate_time_sec: u32 = 0;
     loop {
         tokio::time::sleep(Duration::from_secs(1)).await;
+        not_very_accurate_time_sec = 1;
         if thread
             .interrupt_controller
             .interrupts_enabled
             .load(ORDERING)
         {
-            thread.interrupt_controller.interrupt(Interrupt::Timer);
-            thread.is_halting.store(false, ORDERING);
+            thread.interrupt(Interrupt {
+                kind: InterruptKind::Timer,
+                data: 0,
+            });
         }
     }
 }
@@ -204,7 +203,6 @@ pub fn create_thread(stack_base_addr: B32) -> Thread {
     Thread {
         interrupt_controller: InterruptController {
             interrupts_enabled: AtomicBool::new(false),
-            interrupted: AtomicBool::new(false),
             interrupts: ArrayQueue::new(5),
             IDT: IDT {
                 base_addr: AtomicU32::new(0),

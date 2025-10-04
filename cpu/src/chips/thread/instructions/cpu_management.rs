@@ -61,22 +61,19 @@ impl Thread {
     pub fn Intr(&self, thread_index_register: B8, interrupt_type_index_register: B8, run: bool) {
         let thread_index = self.registers.read(thread_index_register);
         let interrupt_type = self.registers.read(interrupt_type_index_register);
-        THREADS.get().expect("THREADS were not initialized")[thread_index.0 as usize]
-            .interrupt_controller
-            .interrupt(interrupt_type.0.try_into().unwrap());
+        THREADS.get().expect("THREADS were not initialized")[thread_index.0 as usize].interrupt(
+            crate::chips::thread::Interrupt {
+                kind: interrupt_type.0.try_into().unwrap(),
+                data: 0,
+            },
+        );
     }
     const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;
     pub fn Iret(&self, address_register: B8, run: bool) {
-        info!(
-            "Iret, jmp_address: {}",
-            self.registers.read(address_register)
-        );
         self.Jmp(address_register, run);
         self.interrupt_controller.end_interrupt();
     }
     pub fn Idt(&self, address_register: B8, run: bool) {
-        info!("run idt");
-
         let base_addr = self.registers.read(address_register);
         self.interrupt_controller
             .IDT
@@ -85,8 +82,7 @@ impl Thread {
         self.interrupt_controller
             .interrupts_enabled
             .store(true, ORDERING);
-        self.interrupt_controller
-            .interrupt(crate::chips::thread::Interrupt::Timer);
+
         true;
     }
     pub async fn Phrp(&self, index_register: B8, data_register: B8, run: bool) -> Result<()> {

@@ -1,4 +1,3 @@
-use eframe::emath::interpolation_factor;
 use log::info;
 
 use crate::{B8, chips::thread::Thread};
