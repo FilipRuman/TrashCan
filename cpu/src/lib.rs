@@ -14,14 +14,15 @@ use chips::{
 
 pub mod chips;
 mod error;
-pub mod gui;
+pub mod fb;
 pub(crate) mod peripherals;
 pub mod program_loader;
 
 use anyhow::{Context, Ok, Result};
 use clap::Parser;
-use gui::MyApp;
+use fb::run_frame_buffer;
 use log::*;
+use minifb::Window;
 use tokio::task;
 
 pub const SHOW_INSTRUCTION_FETCHING_DEBUG: bool = false;
@@ -36,13 +37,6 @@ pub async fn main() -> Result<()> {
     if let Err(err) = init().await.context("encountered error while running CPU:") {
         error::handle_error(err);
     }
-
-    if let Err(err) = gui::init_app_gui()
-        .await
-        .context("encountered error while running GUI:")
-    {
-        error::handle_error(err);
-    };
 
     Ok(())
 }
@@ -65,6 +59,7 @@ pub async fn init() -> Result<()> {
 
     tokio::spawn(clock_cycle(thread));
     tokio::spawn(thread.run_loop());
+    tokio::spawn(run_frame_buffer());
     Ok(())
 }
 pub async fn load_memory_from_file(path: &str, memory_load_base_addr: B32) -> Result<()> {
@@ -95,12 +90,3 @@ pub fn test_load_memory(data: Vec<B32>) {
 }
 
 pub static MEMORY: OnceLock<Box<RAM256k>> = OnceLock::new();
-
-pub fn gui_loop(app: &mut MyApp) -> Result<()> {
-    // let memory = MEMORY
-    //     .get()
-    //     .expect("gui loop run before init function or memory was not yet initialized");
-    // let out = memory.read(app.variables.read("addr")?);
-    // app.variables.write("out", out)?;
-    Ok(())
-}

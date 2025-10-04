@@ -1,3 +1,5 @@
+use std::{thread::sleep, time::Duration};
+
 use anyhow::{Context, Result};
 use log::{error, trace};
 
@@ -21,6 +23,9 @@ pub async fn main() -> Result<()> {
     }
 
     cpu::main().await?;
+    loop {
+        sleep(Duration::from_secs(1000));
+    }
     Ok(())
 }
 
