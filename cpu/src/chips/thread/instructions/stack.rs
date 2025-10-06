@@ -14,7 +14,4 @@ impl Thread {
     pub fn Ret(&self, run: bool) {
         todo!();
     }
-    pub fn Caddr(&self, output_register: B8, run: bool) {
-        self.registers.write(self.pc.read(), output_register, run);
-    }
 }

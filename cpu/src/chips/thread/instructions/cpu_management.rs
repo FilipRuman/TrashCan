@@ -5,7 +5,7 @@ use tokio::time::sleep;
 
 use crate::{
     B8,
-    chips::thread::{ORDERING, THREADS, Thread, clock_cycle},
+    chips::thread::{CURRENT_ADDR_REGISTER, ORDERING, THREADS, Thread, clock_cycle},
     peripherals::call_peripheral,
 };
 
@@ -22,11 +22,9 @@ impl Thread {
     }
     pub fn Jmp(&self, register_jump_target: B8, run: bool) {
         // store addr
-        self.pc.write(
-            true,
-            false,
-            false,
+        self.registers.write(
             self.registers.read(register_jump_target),
+            CURRENT_ADDR_REGISTER,
             run,
         );
     }
@@ -35,11 +33,9 @@ impl Thread {
         let condition = self.registers.read(register_condition).bit(0);
 
         // store addr
-        self.pc.write(
-            true,
-            false,
-            false,
+        self.registers.write(
             self.registers.read(register_jump_target),
+            CURRENT_ADDR_REGISTER,
             run & condition,
         );
     }
@@ -52,7 +48,8 @@ impl Thread {
         let thread_index = self.registers.read(register_thread_index);
         let start_address = self.registers.read(start_address_register);
         let thread = &THREADS.get().unwrap()[thread_index.0 as usize];
-        thread.pc.set(start_address, run);
+        self.registers
+            .write(start_address, CURRENT_ADDR_REGISTER, run);
 
         tokio::spawn(clock_cycle(thread));
         tokio::spawn(thread.run_loop());

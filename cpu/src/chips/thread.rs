@@ -15,10 +15,7 @@ use tokio::time::sleep;
 
 use crate::{
     MEMORY, SHOW_INSTRUCTION_FETCHING_DEBUG,
-    chips::{
-        b32::B32,
-        memory::{Counter, RAM::ram256::RAM256},
-    },
+    chips::{b32::B32, memory::RAM::ram256::RAM256},
     error::handle_error,
 };
 
@@ -84,7 +81,7 @@ impl InterruptController {
             let memory = MEMORY.get().expect("memory was not yet initialized");
             let interrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
             // -1 because jmp instruction advances instruction addr by 1
-            let current_addr = thread.pc.read() - B32(1);
+            let current_addr = thread.registers.read(CURRENT_ADDR_REGISTER) - B32(1);
 
             let stack_head = thread.registers.read(STACK_HEAD_REGISTER);
             thread
@@ -121,9 +118,10 @@ pub const STACK_HEAD_REGISTER: B8 = B8(254);
 pub const STACK_FRAME_REGISTER: B8 = B8(255);
 pub const CPU_REGISTER_1: B8 = B8(253);
 pub const CPU_REGISTER_2: B8 = B8(252);
+pub const LOAD_BASE_REGISTER: B8 = B8(251);
+pub const CURRENT_ADDR_REGISTER: B8 = B8(250);
 pub struct Thread {
     pub interrupt_controller: InterruptController,
-    pub pc: Counter,
     registers: RAM256,
     is_halting: AtomicBool,
     stack_base_addr: B32,
@@ -142,7 +140,7 @@ impl Thread {
 
             let instruction = self.fetch_instruction();
             if SHOW_INSTRUCTION_FETCHING_DEBUG {
-                info!("pc-address: {}", self.pc.read());
+                info!("pc-address: {}", self.registers.read(CURRENT_ADDR_REGISTER));
                 info!("fetch_instruction: {:?}", instruction);
             }
             if let Err(err) = self
@@ -152,7 +150,7 @@ impl Thread {
             {
                 handle_error(err);
             }
-            self.pc.increment(true);
+            self.registers.increment(CURRENT_ADDR_REGISTER);
         }
         Ok(())
     }
@@ -165,7 +163,7 @@ impl Thread {
         }
     }
     fn read_instruction_form_current_pc_memory(&self) -> Instruction {
-        let addr = self.pc.read();
+        let addr = self.registers.read(CURRENT_ADDR_REGISTER);
         let data = MEMORY.get().unwrap().read(addr);
 
         data.into()
@@ -212,7 +210,6 @@ pub fn create_thread(stack_base_addr: B32) -> Thread {
             },
         },
         stack_base_addr,
-        pc: (Counter::new()),
         registers,
         is_halting: (AtomicBool::new(false)),
     }

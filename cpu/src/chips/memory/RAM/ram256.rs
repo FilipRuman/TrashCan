@@ -20,6 +20,10 @@ impl RAM256 {
         let out = B32::mux256_fn(&self.modules, |register| register.read(), addr);
         out
     }
+    pub fn increment(&self, addr: B8) {
+        let out = B32::mux256_fn(&self.modules, |register| register.read(), addr);
+        self.write(out + B32(1), addr, true);
+    }
     pub fn write(&self, data: B32, addr: B8, store: bool) {
         data.d_mux256_fn(
             &self.modules,

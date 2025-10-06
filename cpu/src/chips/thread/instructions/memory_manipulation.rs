@@ -1,6 +1,10 @@
 use crate::{
     MEMORY,
-    chips::{b8::B8, b32::B32, thread::Thread},
+    chips::{
+        b8::B8,
+        b32::B32,
+        thread::{CURRENT_ADDR_REGISTER, Thread},
+    },
 };
 impl Thread {
     pub fn Read(&self, destination_register: B8, source_address_register: B8, run: bool) {
@@ -29,8 +33,8 @@ impl Thread {
         self.registers.write(B32(0), register, run);
     }
     pub fn Set(&self, register: B8, run: bool) {
-        let data_addr = self.pc.read() + B32(1);
-        self.pc.increment(run);
+        let data_addr = self.registers.read(CURRENT_ADDR_REGISTER) + B32(1);
+        self.registers.increment(CURRENT_ADDR_REGISTER);
         self.registers
             .write(MEMORY.get().unwrap().read(data_addr), register, run);
     }

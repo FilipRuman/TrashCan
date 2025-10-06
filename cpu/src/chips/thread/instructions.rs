@@ -32,6 +32,7 @@ pub enum Instruction {
     Clr(B8),
     Caddr(B8),
     Set(B8),
+    RSet(B8),
     Pgt(B8),
 
     Add(B8, B8),
@@ -110,6 +111,8 @@ impl From<Instruction> for B8 {
             Instruction::Ret() => B8(37),
             Instruction::Caddr(_) => B8(38),
             Instruction::IRet(_) => B8(39),
+
+            Instruction::RSet(_) => B8(40),
         }
     }
 }
@@ -158,6 +161,7 @@ impl From<B32> for Instruction {
 
             38 => Self::Caddr(value.byte(1)),
             39 => Self::IRet(value.byte(1)),
+40 =>  SEt
             index => {
                 panic!("conversion form B32 to instruction with index: {index} is not supported")
             }

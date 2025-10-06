@@ -5,7 +5,8 @@ use crate::{
     chips::{
         b32::B32,
         thread::{
-            CPU_REGISTER_1, CPU_REGISTER_2, Interrupt, InterruptKind, STACK_HEAD_REGISTER, Thread,
+            CPU_REGISTER_1, CPU_REGISTER_2, CURRENT_ADDR_REGISTER, Interrupt, InterruptKind,
+            STACK_HEAD_REGISTER, Thread,
         },
     },
 };
@@ -26,7 +27,7 @@ impl Thread {
             self.interrupt_controller.IDT.base_addr.load(ORDERING) + InterruptKind::Syscall as u32;
         let memory = MEMORY.get().expect("memory was not yet initialized");
         let interrupt_function_addr = memory.read(B32(interrupt_function_pointer as u32));
-        let current_addr = self.pc.read();
+        let current_addr = self.registers.read(CURRENT_ADDR_REGISTER);
 
         let stack_head = self.registers.read(STACK_HEAD_REGISTER);
         self.registers
