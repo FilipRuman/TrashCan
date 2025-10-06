@@ -161,6 +161,10 @@ impl AssemblyData {
     }
     /// return: base address of allocation
     pub fn allocate_stack(&mut self, size: u32) -> Result<(String, u32)> {
+        info!(
+            "\n \n \n allocate_stack - current: {} size: {}",
+            self.current_offset_from_stack_frame_base, size
+        );
         let allocation_base_addr = self.current_offset_from_stack_frame_base;
         let size_register = self.get_free_register()?;
         let code = comment(&format!(
@@ -354,10 +358,7 @@ impl Data {
         assembly_data: &mut AssemblyData,
     ) -> Result<String> {
         if !self.is_reference() {
-            bail!(
-                "you tried to read referenced addr of variable: {:?} that is not a reference",
-                self
-            )
+            return Ok(self.read_addr_of_self(output_addr_register));
         }
         let mut output_code = String::new();
         output_code += &comment("read_referenced_address");

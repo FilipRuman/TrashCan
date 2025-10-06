@@ -1,6 +1,9 @@
-use super::assembly_instructions::{add, comment, jmp, jmp_label, label, read, set_label, write};
+use super::assembly_instructions::{
+    add, comment, cp, jmp, jmp_label, label, read, set_label, write,
+};
 use super::data_structures::{Data, StaticVariable};
 use super::expression_handler_functions::functions::{call_function_code, handle_function_call};
+use super::helper_methods::STACK_FRAME_POINTER;
 use super::{
     AssemblyData, ExpressionOutput,
     assembly_instructions::{self, phrp, set},
@@ -8,6 +11,66 @@ use super::{
 };
 use crate::{assembly_writer::data_structures::DataType, parser::expression::Expression};
 use anyhow::*;
+use log::info;
+
+#[repr(u32)]
+pub enum SyscallTypeID {
+    Print = 0,
+    Malloc = 1,
+}
+
+pub fn syscall(
+    id_expression: Expression,
+    data_expression: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let id_expr_out = handle_expr(id_expression, assembly_data)?;
+    output_code += &id_expr_out.code;
+    let data_expr_out = handle_expr(data_expression, assembly_data)?;
+    output_code += &data_expr_out.code;
+
+    let output_data_alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &output_data_alloc_out.0;
+
+    let output_data = Data {
+        stack_frame_offset: output_data_alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::U32,
+    };
+
+    let syscall_id_register = assembly_data.get_free_register()?;
+    output_code += &id_expr_out
+        .data
+        .context("expected syscall id expression to output data")?
+        .read_register(syscall_id_register, 0, assembly_data)?;
+    let input_data_register = assembly_data.get_free_register()?;
+    output_code += &data_expr_out
+        .data
+        .context("expected input data expression to output data")?
+        .read_referenced_address(input_data_register, assembly_data)?;
+
+    let output_data_register = assembly_data.get_free_register()?;
+    output_code += &output_data.read_addr_of_self(output_data_register);
+
+    output_code += &assembly_instructions::syscall(
+        syscall_id_register,
+        input_data_register,
+        output_data_register,
+    );
+
+    output_code += &output_data.write_register(output_data_register, 0, assembly_data)?;
+    assembly_data.mark_registers_free(&[
+        output_data_register,
+        syscall_id_register,
+        input_data_register,
+    ]);
+
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(output_data),
+    })
+}
 
 pub fn mark(expr: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     let text = if let Expression::String(text, _) = expr {
@@ -110,6 +173,14 @@ pub fn direct_reference_access(
         data: Some(data),
     })
 }
+pub fn print(input_expr: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    syscall(
+        Expression::Number(SyscallTypeID::Print as u32, input_expr.debug_data()),
+        input_expr,
+        assembly_data,
+    )
+}
+
 pub fn malloc(
     input_expression: Expression,
     assembly_data: &mut AssemblyData,
@@ -133,27 +204,19 @@ pub fn malloc(
     output_code += &alloc_out.0;
 
     let size_register = assembly_data.get_free_register()?;
-    output_code += &set(size_register, input_data.size);
-    let heap_allocation_base_addr_data = {
-        let size_data = Data {
-            stack_frame_offset: alloc_out.1 as i32,
-            size: 1,
-            data_type: DataType::U32,
-        };
-        output_code += &size_data.write_register(size_register, 0, assembly_data)?;
+    let syscall_id_register = assembly_data.get_free_register()?;
+    let output_addr_register = assembly_data.get_free_register()?;
+    output_code += &set(syscall_id_register, SyscallTypeID::Malloc as u32);
 
-        let function_call_out =
-            call_function_code(&[size_data], alloc_function.clone(), assembly_data)?;
-
-        output_code += &function_call_out.code;
-        let heap_allocation_base_addr_data = function_call_out
-            .data
-            .context("expected core_allocate function to output data")?;
-        if heap_allocation_base_addr_data.data_type != DataType::U32 {
-            bail!("expected core_allocate function to output U32 data");
-        }
-        heap_allocation_base_addr_data
+    let heap_allocation_base_addr_data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::U32,
     };
+    output_code += &set(output_addr_register, alloc_out.1);
+    output_code += &add(output_addr_register, STACK_FRAME_POINTER);
+    output_code +=
+        &assembly_instructions::syscall(syscall_id_register, size_register, output_addr_register);
 
     let heap_allocation_base_addr_register = assembly_data.get_free_register()?;
     output_code += &heap_allocation_base_addr_data.read_register(
@@ -161,6 +224,7 @@ pub fn malloc(
         0,
         assembly_data,
     )?;
+
     // reuse allocation
     let output_data = Data {
         stack_frame_offset: alloc_out.1 as i32,

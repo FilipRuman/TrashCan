@@ -1,9 +1,13 @@
 //order of including files is top to bottom  
 
+include "init_code.tip"
 include "useful.tip"
 include "allocator.tip"
 include "interrupt_handlers.tip"
-include "init_code.tip"
+include "syscall.tip"
+
 
 //  TODO: Implement: graphics rendering, paging,. 
 
+
+// implement syscalls, implement additional data loading - load other application's code, run other app, test syscalls on this other app, write command line app, add support for multithreading 

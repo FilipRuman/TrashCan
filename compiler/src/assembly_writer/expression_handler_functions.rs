@@ -102,38 +102,61 @@ pub fn handle_as(
     target_type: Type,
     assembly_data: &mut AssemblyData,
 ) -> Result<ExpressionOutput> {
-    let mut output_code = String::new();
     let expr_out = handle_expr(expression, assembly_data)?;
     let input_data = expr_out
         .data
         .context("input expression has to output data")?;
-    output_code += &expr_out.code;
     let data_type = DataType::parse_type(target_type, assembly_data)?;
-    let size = data_type.size(assembly_data)?;
-
-    let alloc_out = assembly_data.allocate_stack(size)?;
-    output_code += &alloc_out.0;
     let data = Data {
-        stack_frame_offset: alloc_out.1 as i32,
-        size,
+        stack_frame_offset: input_data.stack_frame_offset,
+        size: data_type.size(assembly_data)?,
         data_type,
     };
-    let copy_register = assembly_data.get_free_register()?;
-    for i in 0..data.size {
-        if input_data.size > i {
-            output_code += &input_data.read_register(copy_register, i, assembly_data)?;
-        } else {
-            output_code += &set(copy_register, 0);
-        }
-        output_code += &data.write_register(copy_register, i, assembly_data)?;
-    }
-    assembly_data.mark_registers_free(&[copy_register]);
 
     Ok(ExpressionOutput {
-        code: output_code,
+        code: String::new(),
         data: Some(data),
     })
 }
+
+//
+// pub fn handle_as(
+//     expression: Expression,
+//     target_type: Type,
+//     assembly_data: &mut AssemblyData,
+// ) -> Result<ExpressionOutput> {
+//     let mut output_code = String::new();
+//     let expr_out = handle_expr(expression, assembly_data)?;
+//     let input_data = expr_out
+//         .data
+//         .context("input expression has to output data")?;
+//     output_code += &expr_out.code;
+//     let data_type = DataType::parse_type(target_type, assembly_data)?;
+//     let size = data_type.size(assembly_data)?;
+//
+//     let alloc_out = assembly_data.allocate_stack(size)?;
+//     output_code += &alloc_out.0;
+//     let data = Data {
+//         stack_frame_offset: alloc_out.1 as i32,
+//         size,
+//         data_type,
+//     };
+//     let copy_register = assembly_data.get_free_register()?;
+//     for i in 0..data.size {
+//         if input_data.size > i {
+//             output_code += &input_data.read_register(copy_register, i, assembly_data)?;
+//         } else {
+//             output_code += &set(copy_register, 0);
+//         }
+//         output_code += &data.write_register(copy_register, i, assembly_data)?;
+//     }
+//     assembly_data.mark_registers_free(&[copy_register]);
+//
+//     Ok(ExpressionOutput {
+//         code: output_code,
+//         data: Some(data),
+//     })
+// }
 pub fn handle_reference(
     inside: Expression,
     assembly_data: &mut AssemblyData,

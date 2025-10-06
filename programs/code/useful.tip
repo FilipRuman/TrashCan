@@ -1,4 +1,4 @@
-fn print(text: &u32[]){
+fn print_chars(text: &u32[]){
 
 	let text_len = text.len();
 	for i in 0..text_len{

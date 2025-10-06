@@ -1,0 +1,22 @@
+fn syscall_handler(syscall_id: u32, additional_data_addr: u32, output_data:&u32) {
+
+	if  syscall_id == 0{
+		let text_data : &u32[] = additional_data_addr as &u32[] ;
+		print_chars(text_data);
+	}else if syscall_id == 1{
+		output_data = core_allocate(additional_data_addr);
+		print_raw(255);
+		print_raw(output_data);
+	} 
+	else{
+		print_chars("found unexpected syscall id");
+	}
+
+	//print("syscall_handler");
+	//print_raw(syscall_id);
+	//print_raw(additional_data_addr);
+	//print_raw(output_data_addr);
+
+
+	return ;
+}

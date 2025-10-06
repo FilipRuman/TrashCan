@@ -29,7 +29,7 @@ pub async fn parse_file(
     for (i, token) in tokens.iter().enumerate() {
         token.debug(i as u32);
     }
-    parser::parse(tokens).context("encountered while parsing")
+    parser::parse(tokens, input_path.to_owned()).context("encountered while parsing")
 }
 
 pub async fn iterative_file_parsing(
@@ -55,7 +55,7 @@ pub async fn iterative_file_parsing(
 
     let mut out_vec = Vec::with_capacity(size);
 
-    for file_contents in file_contents_from_includes_vec.iter_mut().rev() {
+    for file_contents in file_contents_from_includes_vec.iter_mut() {
         out_vec.append(file_contents);
     }
 

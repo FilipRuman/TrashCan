@@ -3,7 +3,7 @@ pub mod data_types;
 use crate::assembly_writer::{
     core_functions::{
         self, access_static_variable, create_static_variable, direct_reference_access, free, idt,
-        malloc, mark, memory_access, read_addr_of_function,
+        malloc, mark, memory_access, print, read_addr_of_function, syscall,
     },
     data_types::FunctionInputData,
 };
@@ -205,6 +205,7 @@ pub fn handle_function(
     assembly_data.current_offset_from_stack_frame_base = 0;
 
     let mut output_code = String::new();
+    output_code += &comment(&format!("function: {:?}", function));
     output_code += &label(&function.label_name);
 
     let initial_stack_frame_register = assembly_data.get_free_register()?;
@@ -496,6 +497,11 @@ pub fn handle_core_function_call(
 
             Ok(Some(malloc(values[0].to_owned(), assembly_data)?))
         }
+        "print" => {
+            expect_input_len(values, 1).context("print")?;
+
+            Ok(Some(print(values[0].to_owned(), assembly_data)?))
+        }
         "free" => {
             expect_input_len(values, 1).context("free")?;
 
@@ -504,6 +510,14 @@ pub fn handle_core_function_call(
         "mark" => {
             expect_input_len(values, 1).context("mark")?;
             Ok(Some(mark(values[0].to_owned(), assembly_data)?))
+        }
+        "syscall" => {
+            expect_input_len(values, 2).context("syscall")?;
+            Ok(Some(syscall(
+                values[0].to_owned(),
+                values[1].to_owned(),
+                assembly_data,
+            )?))
         }
         "read_addr_of_function" => {
             expect_input_len(values, 1).context("read_addr_of_function")?;

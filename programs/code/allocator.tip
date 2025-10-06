@@ -3,7 +3,6 @@
 // that way you get a index in array, than you can check if addr of this thing is good, if not look to the child node. if nothing matches this addr is fre.
 // this will be useful for defragmentation 
 
-
 struct HeapBlock{
 	next: &HeapBlock,
 }
@@ -17,7 +16,7 @@ fn core_deallocate(addr:u32,size_raw: u32){
 
 	let current_head_of_needed_list = access_static("free_heap_blocks_linked_lists")[size_to_free_log2];
 	let addr_of_current_head = *access_reference(current_head_of_needed_list);
-	print_raw(addr_of_current_head);
+	//print_raw(addr_of_current_head);
 		
 	let new_heap_block = HeapBlock[next = (addr_of_current_head as &HeapBlock)];
 
@@ -27,12 +26,16 @@ fn core_deallocate(addr:u32,size_raw: u32){
 	// addr as &HeapBlock
 	access_reference(access_static("free_heap_blocks_linked_lists")[size_to_free_log2]) = addr  ; 
 	
-	print_raw(addr);
+	//print_raw(addr);
 	return ;
 }
 
 
 fn core_allocate(size: u32)-> u32{
+
+	//print_raw(66);
+	//print_raw(size);
+
 	let size_log2= ceil_log2(size) ;
 
 	let min = access_static("min_heap_size_pow_2");
@@ -50,11 +53,13 @@ fn core_allocate(size: u32)-> u32{
 		addr = allocate_new_block_of_memory_from_main_pool(size_index);	
 	}else{
 		let next_addr : u32 = mem(addr);
-		print_raw(next_addr);
+	//	print_raw(next_addr);
 		let head = access_static("free_heap_blocks_linked_lists")[size_index];
 		access_static("free_heap_blocks_linked_lists")[size_index] = block_to_allocate.next ;
 	}
-	print_raw(addr);
+	//print_raw(addr);
+
+	//print_raw(661);
 
 	return addr;
 }

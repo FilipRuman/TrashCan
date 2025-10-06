@@ -121,7 +121,7 @@ fn parse_instruction(
                 "Halt" => Ok((Some(Instruction::Halt()), None)).context("Halt"),
                 "Sleep" => parse_instruction_1(&tokens, line_nr, Instruction::Sleep).context("Sleep"),
                 "Rng" => parse_instruction_3(&tokens, line_nr, Instruction::Rng).context("Rng"),
-                "Syscall" => parse_instruction_2(&tokens, line_nr, Instruction::Syscall).context("Syscall"),
+                "Syscall" => parse_instruction_3(&tokens, line_nr, Instruction::Syscall).context("Syscall"),
 
                 "Push" => parse_instruction_1(&tokens, line_nr, Instruction::Push).context("Push"),
                 "Call" => parse_instruction_1(&tokens, line_nr, Instruction::Call).context("Call"),
@@ -177,7 +177,6 @@ where
 {
     let arg1 = parse_registry_token(tokens, 1, line_nr)?;
     let arg2 = parse_registry_token(tokens, 2, line_nr)?;
-
     let arg3 = parse_registry_token(tokens, 3, line_nr)?;
     Ok((Some(make(arg1, arg2, arg3)), None))
 }

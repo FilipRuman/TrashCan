@@ -1,3 +1,4 @@
+use clap::builder::Str;
 use log::info;
 
 use crate::{
@@ -20,10 +21,16 @@ impl Serial {
         }
     }
     fn write_serial(&mut self) {
-        let string = String::from_utf8(self.text.clone()).expect(&format!(
-            "text: {:?} send thru serial was not a valid utf-8!",
-            self.text
-        ));
+        let string = match String::from_utf8(self.text.clone()) {
+            Ok(val) => val,
+            Err(_) => {
+                info!(
+                    "text: {:?} send thru serial was not a valid utf-8!",
+                    self.text
+                );
+                String::new()
+            }
+        };
         self.text.clear();
         info!("SERIAL: {string}");
     }

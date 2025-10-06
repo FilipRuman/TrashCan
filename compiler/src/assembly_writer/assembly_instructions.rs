@@ -1,3 +1,10 @@
+pub fn syscall(
+    syscall_id_register: u8,
+    input_data_register: u8,
+    output_data_register: u8,
+) -> String {
+    format!("Syscall r{syscall_id_register} , r{input_data_register} , r{output_data_register}\n")
+}
 pub fn comment(text: &str) -> String {
     format!("// {}\n", text.replace("\n", "\n //"))
 }

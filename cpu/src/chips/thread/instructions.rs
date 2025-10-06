@@ -58,7 +58,7 @@ pub enum Instruction {
     Halt(),
     Sleep(B8),
     Rng(B8, B8, B8),
-    Syscall(B8, B8),
+    Syscall(B8, B8, B8),
 
     Push(B8),
     Pop(B8),
@@ -103,7 +103,7 @@ impl From<Instruction> for B8 {
             Instruction::Halt() => B8(30),
             Instruction::Sleep(_) => B8(31),
             Instruction::Rng(_, _, _) => B8(32),
-            Instruction::Syscall(_, _) => B8(33),
+            Instruction::Syscall(_, _, _) => B8(33),
             Instruction::Push(_) => B8(34),
             Instruction::Pop(_) => B8(35),
             Instruction::Call(_) => B8(36),
@@ -150,7 +150,7 @@ impl From<B32> for Instruction {
             30 => Self::Halt(),
             31 => Self::Sleep(value.byte(1)),
             32 => Self::Rng(value.byte(1), value.byte(2), value.byte(3)),
-            33 => Self::Syscall(value.byte(1), value.byte(2)),
+            33 => Self::Syscall(value.byte(1), value.byte(2), value.byte(3)),
             34 => Self::Push(value.byte(1)),
             35 => Self::Pop(value.byte(1)),
             36 => Self::Call(value.byte(1)),
@@ -428,12 +428,17 @@ impl From<Instruction> for B32 {
                     max_register,
                 ])
             }
-            Instruction::Syscall(system_call_index_register, argument_block_register) => {
+
+            Instruction::Syscall(
+                system_call_index_register,
+                argument_block_register,
+                output_data_addr_register,
+            ) => {
                 B32::from_bytes([
                     value.into(), // command index
                     system_call_index_register,
                     argument_block_register,
-                    B8(0), // fill
+                    output_data_addr_register,
                 ])
             }
             Instruction::Push(contents_register) => {
@@ -546,9 +551,16 @@ impl Thread {
             Instruction::Rng(out_register, min_register, max_register) => {
                 self.Rng(out_register, min_register, max_register, run)
             }
-            Instruction::Syscall(system_call_index_register, argument_block_register) => {
-                self.Syscall(system_call_index_register, argument_block_register, run)
-            }
+            Instruction::Syscall(
+                system_call_index_register,
+                argument_block_register,
+                output_data_addr_register,
+            ) => self.Syscall(
+                system_call_index_register,
+                argument_block_register,
+                output_data_addr_register,
+                run,
+            ),
             Instruction::Push(contents_register) => self.Push(contents_register, run),
             Instruction::Pop(output_register) => self.Pop(output_register, run),
             Instruction::Call(address_register) => self.Call(address_register, run),

@@ -15,6 +15,7 @@ pub mod types;
 
 pub struct Parser {
     pub files_to_include: Vec<String>,
+    pub current_debug_file_name: String,
     pub index: usize,
     pub tokens: Vec<Token>,
     pub lookup: Lookup,
@@ -26,15 +27,17 @@ impl Parser {
     pub fn get_current_debug_data(&self) -> Result<DebugData> {
         Ok(DebugData {
             line: self.current_token()?.line as usize,
+            file: self.current_debug_file_name.clone(),
         })
     }
-    pub fn new(tokens: Vec<Token>) -> Parser {
+    pub fn new(tokens: Vec<Token>, current_debug_file_name: String) -> Parser {
         Parser {
             files_to_include: vec![],
             index: 0,
             tokens,
             lookup: Lookup::new(),
             type_lookup: TypeLookup::new(),
+            current_debug_file_name,
         }
     }
     pub fn get_token(&self, index: usize) -> Result<&Token> {
@@ -82,8 +85,8 @@ pub struct ParserOutput {
     pub expressions: Vec<Expression>,
     pub files_to_include: Vec<String>,
 }
-pub fn parse(tokens: Vec<Token>) -> Result<ParserOutput> {
-    let mut parser = Parser::new(tokens);
+pub fn parse(tokens: Vec<Token>, current_debug_file_name: String) -> Result<ParserOutput> {
+    let mut parser = Parser::new(tokens, current_debug_file_name);
 
     let mut parsed_lines: Vec<Expression> = Vec::new();
     while parser.current_token_kind()? != &TokenKind::EndOfFile {

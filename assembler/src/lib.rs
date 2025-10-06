@@ -2,7 +2,7 @@ pub mod parsing;
 
 use std::collections::HashMap;
 
-use cpu::chips::b32::B32;
+use cpu::chips::{b8::B8, b32::B32, thread::instructions::Instruction};
 
 use anyhow::{Context, Result};
 use log::info;
@@ -18,12 +18,17 @@ pub async fn assemble_file(
         .context("reading input file")?;
 
     let text = String::from_utf8(file_contents_u8)?;
+
     let mut contents: Vec<u8> = Vec::new(); //typical size
 
-    let mut current_line_address: u32 = code_start_addr_in_memory;
-    let mut labels: HashMap<String, u32> = HashMap::new();
+    // add 1 offset with data that does nothing.
+    // this is needed for code that starts with label. labels addr has to be decreased by 1, so if
+    // it's addr is 0, -1 it underflows a u32. the offset is needed because JMP instruction adds +1
+    // offset.
+    let mut current_line_address: u32 = code_start_addr_in_memory + 1;
+    let mut instructions: Vec<InstructionData> = vec![(Some(Instruction::Cp(B8(0), B8(0))), None)];
 
-    let mut instructions: Vec<InstructionData> = Vec::new();
+    let mut labels: HashMap<String, u32> = HashMap::new();
     for (line_nr, line_text) in text.lines().enumerate() {
         let instruction_option =
             parse_line(line_text, line_nr, &mut current_line_address, &mut labels)?;

@@ -2,9 +2,10 @@ use crate::lexer::tokens::{Token, TokenKind};
 
 use super::types::Type;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DebugData {
     pub line: usize,
+    pub file: String,
 }
 
 #[derive(Debug, Clone)]
@@ -160,7 +161,7 @@ pub enum Expression {
     },
 }
 impl Expression {
-    pub fn debug_data(&self) -> &DebugData {
+    pub fn debug_data(&self) -> DebugData {
         match self {
             Expression::Skip => todo!(),
             Expression::InterruptFunction {
@@ -169,66 +170,66 @@ impl Expression {
                 public: _,
                 inside: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Break => todo!(),
-            Expression::Number(_, debug_data) => debug_data,
-            Self::Boolean(_, debug_data) => debug_data,
-            Expression::String(_, debug_data) => debug_data,
-            Expression::Identifier(_, debug_data) => debug_data,
+            Expression::Number(_, debug_data) => debug_data.to_owned(),
+            Self::Boolean(_, debug_data) => debug_data.to_owned(),
+            Expression::String(_, debug_data) => debug_data.to_owned(),
+            Expression::Identifier(_, debug_data) => debug_data.to_owned(),
 
-            Expression::Dereference(_, debug_data) => debug_data,
+            Expression::Dereference(_, debug_data) => debug_data.to_owned(),
             Expression::Prefix {
                 prefix: _,
                 value: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Keyword(token_kind) => todo!(),
             Expression::Assignment {
                 target: _,
                 operator: _,
                 value: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::VariableDeclaration {
                 var_type: _,
                 name: _,
                 mutable: _,
                 debug_data,
-            } => debug_data,
-            Expression::Grouping(_, debug_data) => debug_data,
+            } => debug_data.to_owned(),
+            Expression::Grouping(_, debug_data) => debug_data.to_owned(),
             Expression::Struct {
                 public: _,
                 name: _,
                 properties: _,
                 functions: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::StructProperty {
                 var_name: _,
                 var_type: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::StructFunction {
                 name: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Binary {
                 left: _,
                 operator: _,
                 right: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::ClassInstantiation {
                 name: _,
                 properties: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::ArrayInitialization {
                 properties: _,
                 debug_data,
                 length: _,
                 inside_type: _,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Function {
                 name: _,
                 properties: _,
@@ -236,61 +237,61 @@ impl Expression {
                 output: _,
                 inside: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::FunctionProperty {
                 var_name: _,
                 var_type: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::MemberExpr {
                 left: _,
                 right: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Return {
                 value: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::If {
                 condition: _,
                 inside: _,
                 debug_data,
                 chained_elses: _,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Else {
                 condition: _,
                 inside: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::SquareBrackets {
                 left: _,
                 indexes: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::While {
                 condition: _,
                 inside: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::For {
                 iterator_name: _,
                 iteration_target: _,
                 inside: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::Range {
                 from: _,
                 to: _,
                 debug_data,
-            } => debug_data,
+            } => debug_data.to_owned(),
             Expression::FunctionCall {
                 left: _,
                 values: _,
                 debug_data,
-            } => debug_data,
-            Expression::Reference(_, debug_data) => debug_data,
-            Expression::Boolean(_, debug_data) => debug_data,
-            Expression::As(_, _, debug_data) => debug_data,
+            } => debug_data.to_owned(),
+            Expression::Reference(_, debug_data) => debug_data.to_owned(),
+            Expression::Boolean(_, debug_data) => debug_data.to_owned(),
+            Expression::As(_, _, debug_data) => debug_data.to_owned(),
         }
     }
 }

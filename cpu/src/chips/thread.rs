@@ -31,9 +31,12 @@ use super::b8::B8;
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InterruptKind {
-    Timer = 0,
-    Keyboard = 1,
-    Mouse = 2,
+    //Syscall is not handled like interrupt, but addr for it's function is placed inside the same
+    //table
+    Syscall = 0,
+    Timer = 1,
+    Keyboard = 2,
+    Mouse = 3,
 }
 impl From<InterruptKind> for u32 {
     fn from(val: InterruptKind) -> Self {
