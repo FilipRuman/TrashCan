@@ -962,7 +962,7 @@ Add r198 , r255
 Add r198 , r197
 Read r195 , r198
 // read_register- end
-RJmp r195
+Jmp r195
 
 // allocate_stack - current: 43 size: 1
 Set r198 , 1

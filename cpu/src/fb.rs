@@ -13,9 +13,9 @@ fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     (r << 16) | (g << 8) | b
 }
 
-struct Command {
-    color: u32,
-    pos: u32,
+pub struct Command {
+    pub color: u32,
+    pub pos: u32,
 }
 
 pub fn push_new_command(command: Command) {
@@ -39,9 +39,13 @@ pub async fn run_frame_buffer() -> Result<()> {
         minifb::WindowOptions::default(),
     )
     .context("window init")?;
+    for x in 0..WINDOW_WIDTH {
+        for y in 0..WINDOW_HEIGHT {
+            buffer[x + y * WINDOW_WIDTH] = 0;
+        }
+    }
 
     loop {
-        let command_option = COMMAND_QUE.pop();
         for key in window.get_keys_pressed(KeyRepeat::No) {
             let thread = &THREADS.get().unwrap()[keyboard_interrupt_thread];
             thread.interrupt(Interrupt {
@@ -49,8 +53,9 @@ pub async fn run_frame_buffer() -> Result<()> {
                 data: key as u32,
             });
         }
-        if let Some(command) = command_option {
-            buffer[command.pos as usize] = command.color;
+
+        while let Some(command) = COMMAND_QUE.pop() {
+            buffer[command.pos as usize] = u32::MAX;
         }
 
         window

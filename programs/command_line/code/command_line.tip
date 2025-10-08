@@ -1,13 +1,30 @@
+//create_static(1280,"screen_width");
+//create_static(720, "screen_height");
+//test_screen();
+//print("command_line");
+//halt();
+//halt();
+//halt();
+////print("3 halts!");
+//
+//while true{
+//	//print("timer loop");
+//	halt();
+//}
 
-print("command_line");
-halt();
-halt();
-halt();
 
-while true{
-	//print("timer loop");
-	halt();
-}
-fn test_fn(val:u32){
-	print_raw(val);
-}
+fn test_screen(){
+	//let w =access_static("screen_width");
+	let w =1280;
+	let h =720;
+	//let h =access_static("screen_height");
+	for x in 0..w{
+		for y in 0..h{
+			let pos_index = x + y * w;		
+			let color = 11110;
+			peripheral(1,pos_index);
+			peripheral(1,color);
+		}
+	}
+
+} 

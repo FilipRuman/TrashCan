@@ -4,7 +4,7 @@ use crate::assembly_writer::{
     assembly_instructions,
     core_functions::{
         self, access_static_variable, create_static_variable, direct_reference_access, free, idt,
-        jump, malloc, mark, memory_access, print, read_addr_of_function, syscall,
+        jump, malloc, mark, memory_access, peripheral, print, read_addr_of_function, syscall,
     },
     data_types::FunctionInputData,
     helper_methods,
@@ -488,6 +488,15 @@ pub fn handle_core_function_call(
     assembly_data: &mut AssemblyData,
 ) -> Result<Option<ExpressionOutput>> {
     match name {
+        "peripheral" => {
+            expect_input_len(values, 2).context("peripheral")?;
+
+            Ok(Some(peripheral(
+                values[0].to_owned(),
+                values[1].to_owned(),
+                assembly_data,
+            )?))
+        }
         "print_raw" => {
             expect_input_len(values, 1).context("print_raw")?;
 

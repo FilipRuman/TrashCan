@@ -1,6 +1,6 @@
 use super::assembly_instructions::{
-    absolute_set_label, add, comment, cp, jmp_label, label, read, relative_jmp, relative_set_label,
-    write,
+    absolute_set_label, add, comment, cp, jmp, jmp_label, label, read, relative_jmp,
+    relative_set_label, write,
 };
 use super::data_structures::{Data, StaticVariable};
 use super::expression_handler_functions::functions::{call_function_code, handle_function_call};
@@ -532,7 +532,36 @@ pub fn jump(
         .data
         .context("expected input expression to ouptu data")?
         .read_register(address_register, 0, assembly_data)?;
-    output_code += &relative_jmp(address_register);
+    output_code += &jmp(address_register);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
+}
+pub fn peripheral(
+    id_expression: Expression,
+    data_expression: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let id_expr_out = handle_expr(id_expression, assembly_data)?;
+    let data_expr_out = handle_expr(data_expression, assembly_data)?;
+    output_code += &(id_expr_out.code + &data_expr_out.code);
+
+    let id_register = assembly_data.get_free_register()?;
+    let data_register = assembly_data.get_free_register()?;
+
+    output_code +=
+        &id_expr_out
+            .data
+            .context("id expression")?
+            .read_register(id_register, 0, assembly_data)?;
+    output_code += &data_expr_out
+        .data
+        .context("data expression")?
+        .read_register(data_register, 0, assembly_data)?;
+    output_code += &phrp(id_register, data_register);
+
     Ok(ExpressionOutput {
         code: output_code,
         data: None,
