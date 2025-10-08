@@ -21,7 +21,6 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
     let mut output: String = String::new();
     let mut assembly_data = AssemblyData::new();
 
-    info!("expressions: {expressions:#?}");
 
     for expression in &expressions {
         if let Expression::Struct {

@@ -1,11 +1,13 @@
 pub mod data_types;
 
 use crate::assembly_writer::{
+    assembly_instructions,
     core_functions::{
         self, access_static_variable, create_static_variable, direct_reference_access, free, idt,
-        malloc, mark, memory_access, print, read_addr_of_function, syscall,
+        jump, malloc, mark, memory_access, print, read_addr_of_function, syscall,
     },
     data_types::FunctionInputData,
+    helper_methods,
 };
 use std::collections::HashMap;
 
@@ -68,7 +70,7 @@ pub fn handle_return(
     output_code += &if function.is_interrupt_function {
         iret(jump_back_addr_register)
     } else {
-        jmp(jump_back_addr_register)
+        assembly_instructions::jmp(jump_back_addr_register)
     };
     assembly_data.mark_registers_free(&[jump_back_addr_register, initial_stack_frame_register]);
     Ok(ExpressionOutput {
@@ -207,6 +209,9 @@ pub fn handle_function(
     let mut output_code = String::new();
     output_code += &comment(&format!("function: {:?}", function));
     output_code += &label(&function.label_name);
+    // if function.is_interrupt_function {
+    //     output_code += assembly_data(assembly_data);
+    // }
 
     let initial_stack_frame_register = assembly_data.get_free_register()?;
 
@@ -392,12 +397,13 @@ pub fn call_function_code(
     let return_label_name = assembly_data.get_label_name("function-return");
 
     //re use register for return addr
-    output_code += &set_label(source_register, &return_label_name);
+    output_code +=
+        &helper_methods::absolute_set_label(source_register, &return_label_name, assembly_data)?;
     output_code += &write(STACK_HEAD_POINTER, source_register);
 
     //re use register for function addr
-    output_code += &set_label(destination_addr_register, &function.label_name);
-    output_code += &jmp(destination_addr_register);
+    output_code += &relative_set_label(destination_addr_register, &function.label_name);
+    output_code += &relative_jmp(destination_addr_register);
     output_code += &label(&return_label_name);
     // read outputs
 
@@ -487,6 +493,11 @@ pub fn handle_core_function_call(
 
             Ok(Some(print_raw(values[0].to_owned(), assembly_data)?))
         }
+        "jump" => {
+            expect_input_len(values, 1).context("jump")?;
+
+            Ok(Some(jump(values[0].to_owned(), assembly_data)?))
+        }
         "mem" => {
             expect_input_len(values, 1).context("mem")?;
 
@@ -511,6 +522,7 @@ pub fn handle_core_function_call(
             expect_input_len(values, 1).context("mark")?;
             Ok(Some(mark(values[0].to_owned(), assembly_data)?))
         }
+
         "syscall" => {
             expect_input_len(values, 2).context("syscall")?;
             Ok(Some(syscall(

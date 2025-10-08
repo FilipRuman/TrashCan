@@ -10,4 +10,6 @@ include "syscall.tip"
 //  TODO: Implement: graphics rendering, paging,. 
 
 
-// implement syscalls, implement additional data loading - load other application's code, run other app, test syscalls on this other app, write command line app, add support for multithreading 
+// implement: implement additional data loading - load other application's code, run other app, test syscalls on this other app, write command line app, add support for multithreading 
+
+

@@ -13,9 +13,14 @@ pub async fn parse_file(
     input_path: &str,
     input_code_files_base_address: String,
 ) -> Result<parser::ParserOutput> {
-    let content = tokio::fs::read(input_code_files_base_address + input_path)
+    let content = tokio::fs::read(input_code_files_base_address.clone() + input_path)
         .await
-        .with_context(|| format!("Couldn't find input file!- '{input_path}'",))?;
+        .with_context(|| {
+            format!(
+                "Couldn't find input file!- '{}'",
+                input_code_files_base_address + input_path
+            )
+        })?;
 
     let tokens = lexer::tokenize(
         String::from_utf8(content)?,

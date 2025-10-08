@@ -1,9 +1,10 @@
 use super::assembly_instructions::{
-    add, comment, cp, jmp, jmp_label, label, read, set_label, write,
+    absolute_set_label, add, comment, cp, jmp_label, label, read, relative_jmp, relative_set_label,
+    write,
 };
 use super::data_structures::{Data, StaticVariable};
 use super::expression_handler_functions::functions::{call_function_code, handle_function_call};
-use super::helper_methods::STACK_FRAME_POINTER;
+use super::helper_methods::{self, STACK_FRAME_POINTER};
 use super::{
     AssemblyData, ExpressionOutput,
     assembly_instructions::{self, phrp, set},
@@ -104,7 +105,11 @@ pub fn read_addr_of_function(
     };
     let function_label = assembly_data.find_function(&function_name)?;
 
-    output_code += &set_label(addr_register, &function_label.label_name);
+    output_code += &helper_methods::absolute_set_label(
+        addr_register,
+        &function_label.label_name.clone(),
+        assembly_data,
+    )?;
     output_code += &data.write_register(addr_register, 0, assembly_data)?;
 
     assembly_data.mark_registers_free(&[addr_register]);
@@ -360,9 +365,12 @@ pub fn access_static_variable(
         },
     };
     let label_addr_translation_register = assembly_data.get_free_register()?;
-    output_code += &(set_label(label_addr_translation_register, &name)
-        + &data
-            .write_directly_to_reference_pointer(label_addr_translation_register, assembly_data)?);
+    output_code += &(helper_methods::absolute_set_label(
+        label_addr_translation_register,
+        &name,
+        assembly_data,
+    )? + &data
+        .write_directly_to_reference_pointer(label_addr_translation_register, assembly_data)?);
     assembly_data.mark_registers_free(&[label_addr_translation_register]);
 
     output_code += &comment("access_static_variable-end");
@@ -417,11 +425,12 @@ pub fn create_static_variable(
                 offset_of_data_from_reference_addr: 0,
             },
         };
-        output_code += &(set_label(label_addr_conversion_register, &name)
-            + &data_for_static_variable.write_directly_to_reference_pointer(
-                label_addr_conversion_register,
-                assembly_data,
-            )?);
+        output_code += &(helper_methods::absolute_set_label(
+            label_addr_conversion_register,
+            &name,
+            assembly_data,
+        )? + &data_for_static_variable
+            .write_directly_to_reference_pointer(label_addr_conversion_register, assembly_data)?);
         for i in 0..data.size {
             output_code += &(data.read_register(data_copy_register, i, assembly_data)?
                 + &data_for_static_variable.write_register(
@@ -506,6 +515,27 @@ pub fn array_len(assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
     Ok(ExpressionOutput {
         code: output_code,
         data: Some(data),
+    })
+}
+
+pub fn jump(
+    address_expression: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+
+    let addr_expr_out = handle_expr(address_expression, assembly_data)?;
+    output_code += &addr_expr_out.code;
+
+    let address_register = assembly_data.get_free_register()?;
+    output_code += &addr_expr_out
+        .data
+        .context("expected input expression to ouptu data")?
+        .read_register(address_register, 0, assembly_data)?;
+    output_code += &relative_jmp(address_register);
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
     })
 }
 

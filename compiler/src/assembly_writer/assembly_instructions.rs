@@ -22,8 +22,12 @@ pub fn set(register: u8, direct_value: u32) -> String {
     format!("Set r{register} , {direct_value}\n")
 }
 ////// Directly sets value of register to specified value.
-pub fn set_label(register: u8, label_name: &str) -> String {
+pub fn absolute_set_label(register: u8, label_name: &str) -> String {
     format!("Set r{register} , :{label_name}\n")
+}
+////// Directly sets value of register to specified value.
+pub fn relative_set_label(register: u8, label_name: &str) -> String {
+    format!("RSet r{register} , :{label_name}\n")
 }
 /// Reads value from memory at address in `x` into `y`.
 pub fn read(destination_register: u8, address_register: u8) -> String {
@@ -36,8 +40,15 @@ pub fn write(destination_address_register: u8, source_register: u8) -> String {
 pub fn iret(address_register: u8) -> String {
     format!("Iret r{address_register}\n")
 }
+
+pub fn relative_jmp(address_register: u8) -> String {
+    format!("RJmp r{address_register}\n")
+}
 pub fn jmp(address_register: u8) -> String {
     format!("Jmp r{address_register}\n")
+}
+pub fn relative_jmpc(address_register: u8, condition_register: u8) -> String {
+    format!("RJmpc r{address_register} , r{condition_register}\n")
 }
 pub fn jmpc(address_register: u8, condition_register: u8) -> String {
     format!("Jmpc r{condition_register} , r{address_register}\n")
@@ -47,11 +58,12 @@ pub fn jmpc_label(
     label_addr_conversion_register: u8,
     condition_register: u8,
 ) -> String {
-    set_label(label_addr_conversion_register, label_name)
-        + &jmpc(label_addr_conversion_register, condition_register)
+    relative_set_label(label_addr_conversion_register, label_name)
+        + &relative_jmpc(label_addr_conversion_register, condition_register)
 }
 pub fn jmp_label(label_name: &str, label_addr_conversion_register: u8) -> String {
-    set_label(label_addr_conversion_register, label_name) + &jmp(label_addr_conversion_register)
+    relative_set_label(label_addr_conversion_register, label_name)
+        + &relative_jmp(label_addr_conversion_register)
 }
 pub fn label(label_name: &str) -> String {
     format!(":{label_name}\n")

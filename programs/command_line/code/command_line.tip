@@ -1,0 +1,13 @@
+
+print("command_line");
+halt();
+halt();
+halt();
+
+while true{
+	//print("timer loop");
+	halt();
+}
+fn test_fn(val:u32){
+	print_raw(val);
+}

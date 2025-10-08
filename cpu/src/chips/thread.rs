@@ -118,8 +118,7 @@ pub const STACK_HEAD_REGISTER: B8 = B8(254);
 pub const STACK_FRAME_REGISTER: B8 = B8(255);
 pub const CPU_REGISTER_1: B8 = B8(253);
 pub const CPU_REGISTER_2: B8 = B8(252);
-pub const LOAD_BASE_REGISTER: B8 = B8(251);
-pub const CURRENT_ADDR_REGISTER: B8 = B8(250);
+pub const CURRENT_ADDR_REGISTER: B8 = B8(251);
 pub struct Thread {
     pub interrupt_controller: InterruptController,
     registers: RAM256,

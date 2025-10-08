@@ -47,9 +47,10 @@ pub fn parse_line(
 }
 pub type InstructionData = (Option<Instruction>, Option<AdditionalData>);
 
+#[derive(Clone)]
 pub enum AdditionalData {
     RawNumber(u32),
-    Label(String),
+    Label(String, bool),
 }
 
 fn parse_instruction(
@@ -75,6 +76,7 @@ fn parse_instruction(
             *current_line_address += 1;
             match identifier_name.as_str() {
                 "Jmp" => parse_instruction_1(&tokens, line_nr, Instruction::Jmp).context("Jmp"),
+                "RJmp" => parse_instruction_1(&tokens, line_nr, Instruction::RJmp).context("RJmp"),
                 "Jmpc" => parse_instruction_2(&tokens, line_nr, Instruction::Jmpc).context("Jmpc"),
                 "Init" => parse_instruction_2(&tokens, line_nr, Instruction::Init).context("Init"),
                 "Intr" => parse_instruction_2(&tokens, line_nr, Instruction::Intr).context("Intr"),
@@ -84,17 +86,27 @@ fn parse_instruction(
                 "Write" => parse_instruction_2(&tokens, line_nr, Instruction::Write).context("Write"),
                 "Cp" => parse_instruction_2(&tokens, line_nr, Instruction::Cp).context("Cp"),
                 "Clr" => parse_instruction_1(&tokens, line_nr, Instruction::Clr).context("Clr"),
-                "Caddr" => parse_instruction_1(&tokens, line_nr, Instruction::Caddr).context("Caddr"),
-                "Set" => {
+                "RSet" => {
                     // set takes 2 lines because the second one is value
                     *current_line_address += 1;
                     let additional_data =
-                        parse_second_argument_for_set_instruction(&tokens, line_nr)?;
+                        parse_second_argument_for_set_instruction(&tokens, line_nr,true)?;
                     Ok((
                         Some(Instruction::Set(parse_registry_token(&tokens, 1, line_nr)?)),
                         Some(additional_data),
                     ))
-                }
+                },
+                "RJmpc" => parse_instruction_2(&tokens, line_nr, Instruction::RJmpc).context("RJmpc"),
+                "Set" => {
+                    // set takes 2 lines because the second one is value
+                    *current_line_address += 1;
+                    let additional_data =
+                        parse_second_argument_for_set_instruction(&tokens, line_nr,false)?;
+                    Ok((
+                        Some(Instruction::Set(parse_registry_token(&tokens, 1, line_nr)?)),
+                        Some(additional_data),
+                    ))
+                },
                 "Pgt" => parse_instruction_1(&tokens, line_nr, Instruction::Pgt).context("Pgt"),
 
                 "Add" => parse_instruction_2(&tokens, line_nr, Instruction::Add).context("Add"),
@@ -139,13 +151,14 @@ fn parse_instruction(
 fn parse_second_argument_for_set_instruction(
     tokens: &[Token],
     line_nr: usize,
+    is_relative: bool,
 ) -> Result<AdditionalData, anyhow::Error> {
     let additional_data = match tokens
         .get(2)
         .with_context(|| format!("instruction at line:{line_nr} needs at least: 2 parameters!"))?
     {
         Token::Number(number) => AdditionalData::RawNumber(*number),
-        Token::Label(name, _) => AdditionalData::Label(name.to_owned()),
+        Token::Label(name, _) => AdditionalData::Label(name.to_owned(), is_relative),
         token => {
             return Err(anyhow!(
                 "Set instruction takes a second parameter in form of a raw number or label. instead found: {token:?}"

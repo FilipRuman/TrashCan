@@ -8,11 +8,7 @@ use anyhow::{Context, Result};
 use log::info;
 use parsing::{InstructionData, parse_line};
 
-pub async fn assemble_file(
-    input_path: &str,
-    output_path: &str,
-    code_start_addr_in_memory: u32,
-) -> Result<()> {
+pub async fn assemble_file(input_path: &str, output_path: &str) -> Result<()> {
     let file_contents_u8 = tokio::fs::read(input_path)
         .await
         .context("reading input file")?;
@@ -25,19 +21,24 @@ pub async fn assemble_file(
     // this is needed for code that starts with label. labels addr has to be decreased by 1, so if
     // it's addr is 0, -1 it underflows a u32. the offset is needed because JMP instruction adds +1
     // offset.
-    let mut current_line_address: u32 = code_start_addr_in_memory + 1;
-    let mut instructions: Vec<InstructionData> = vec![(Some(Instruction::Cp(B8(0), B8(0))), None)];
+    let mut current_line_address: u32 = 1;
+    let mut instructions: Vec<(InstructionData, u32)> =
+        vec![((Some(Instruction::Cp(B8(0), B8(0))), None), 0)];
 
     let mut labels: HashMap<String, u32> = HashMap::new();
     for (line_nr, line_text) in text.lines().enumerate() {
         let instruction_option =
             parse_line(line_text, line_nr, &mut current_line_address, &mut labels)?;
         if let Some(instruction_data) = instruction_option {
-            instructions.push(instruction_data);
+            instructions.push((instruction_data, current_line_address));
         }
     }
-    for instruction_data in instructions {
-        contents.append(&mut instruction_data_to_binary(instruction_data, &labels)?);
+    for (instruction_data, line_addr) in instructions {
+        contents.append(&mut instruction_data_to_binary(
+            instruction_data,
+            &labels,
+            line_addr,
+        )?);
     }
     tokio::fs::write(output_path, contents.clone())
         .await
@@ -48,6 +49,7 @@ pub async fn assemble_file(
 fn instruction_data_to_binary(
     instruction_data: InstructionData,
     labels: &HashMap<String, u32>,
+    current_addr: u32,
 ) -> Result<Vec<u8>> {
     let mut output = Vec::with_capacity(4); // most common size
     if let Some(instruction) = instruction_data.0 {
@@ -61,12 +63,19 @@ fn instruction_data_to_binary(
     if let Some(additional_data) = instruction_data.1 {
         let b32: B32 = match additional_data {
             parsing::AdditionalData::RawNumber(num) => B32(num as u32),
-            parsing::AdditionalData::Label(label_name) => {
+            parsing::AdditionalData::Label(label_name, is_relative) => {
                 let addr = labels
                     .get(&label_name)
                     .with_context(|| format!("label with name: {label_name} was not found!"))?;
 
-                B32(*addr as u32)
+                if is_relative {
+                    let mut value = *addr as i32 - current_addr as i32;
+                    //value += -value.signum();
+
+                    B32((value) as u32)
+                } else {
+                    B32(*addr)
+                }
             }
         };
         output.push(b32.byte(0).0 as u8);

@@ -130,8 +130,7 @@ impl AssemblyData {
             current_break_label_name: String::new(),
             current_var_name_for_function: String::new(),
             current_var_name_for_array_initialization: String::new(),
-            // 0..=253-> STACK_BASE_POINTER: u8 = 254; && STACK_FRAME_POINTER: u8 = 255;
-            free_registries: (0..=253).collect(),
+            free_registries: (0..CURRENT_ADDR_REGISTER).collect(),
             variable_code_blocks: vec![VariableCodeBlocks {
                 variables: HashMap::new(),
                 code_block_type: CodeBlockType::Exclusive,

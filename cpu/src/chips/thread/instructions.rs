@@ -30,9 +30,8 @@ pub enum Instruction {
     Write(B8, B8),
     Cp(B8, B8),
     Clr(B8),
-    Caddr(B8),
     Set(B8),
-    RSet(B8),
+    RJmp(B8),
     Pgt(B8),
 
     Add(B8, B8),
@@ -66,6 +65,7 @@ pub enum Instruction {
     Call(B8),
     Ret(),
     IRet(B8),
+    RJmpc(B8, B8),
 }
 
 impl From<Instruction> for B8 {
@@ -109,10 +109,10 @@ impl From<Instruction> for B8 {
             Instruction::Pop(_) => B8(35),
             Instruction::Call(_) => B8(36),
             Instruction::Ret() => B8(37),
-            Instruction::Caddr(_) => B8(38),
             Instruction::IRet(_) => B8(39),
+            Instruction::RJmp(_) => B8(40),
 
-            Instruction::RSet(_) => B8(40),
+            Instruction::RJmpc(_, _) => B8(41),
         }
     }
 }
@@ -159,9 +159,10 @@ impl From<B32> for Instruction {
             36 => Self::Call(value.byte(1)),
             37 => Self::Ret(),
 
-            38 => Self::Caddr(value.byte(1)),
             39 => Self::IRet(value.byte(1)),
-40 =>  SEt
+            40 => Self::RJmp(value.byte(1)),
+
+            41 => Self::RJmpc(value.byte(1), value.byte(2)),
             index => {
                 panic!("conversion form B32 to instruction with index: {index} is not supported")
             }
@@ -173,6 +174,14 @@ impl From<Instruction> for B32 {
         // this could be faster if I have used Hashmap and precomputed all of the instructions
 
         match value {
+            Instruction::RJmpc(register_jump_target, condition_register) => {
+                B32::from_bytes([
+                    value.into(), // command index
+                    register_jump_target,
+                    condition_register,
+                    B8(0), // fill
+                ])
+            }
             Instruction::Jmp(register_jump_target) => {
                 B32::from_bytes([
                     value.into(), // command index
@@ -475,14 +484,16 @@ impl From<Instruction> for B32 {
                 B8(0),        // fill
                 B8(0),        // fill
             ]),
-            Instruction::Caddr(out_register) => {
+
+            Instruction::RJmp(address_register) => {
                 B32::from_bytes([
                     value.into(), // command index
-                    out_register,
+                    address_register,
                     B8(0), // fill
                     B8(0), // fill
                 ])
             }
+
             Instruction::IRet(address_register) => B32::from_bytes([
                 value.into(), // command index
                 address_register,
@@ -569,7 +580,11 @@ impl Thread {
             Instruction::Pop(output_register) => self.Pop(output_register, run),
             Instruction::Call(address_register) => self.Call(address_register, run),
             Instruction::Ret() => self.Ret(run),
-            Instruction::Caddr(output_register) => self.Caddr(output_register, run),
+
+            Instruction::RJmp(addresss_register) => self.RJmp(addresss_register, run),
+            Instruction::RJmpc(addresss_register, condition_register) => {
+                self.RJmpc(condition_register, addresss_register, run)
+            }
             Instruction::IRet(address_register) => self.Iret(address_register, run),
         }
         Ok(())
