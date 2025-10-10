@@ -33,8 +33,6 @@ fn core_deallocate(addr:u32,size_raw: u32){
 
 fn core_allocate(size: u32)-> u32{
 
-	print_raw(66);
-	//print_raw(size);
 
 	let size_log2= ceil_log2(size) ;
 
@@ -43,11 +41,7 @@ fn core_allocate(size: u32)-> u32{
 
 
 	if size_log2 > max {
-      		//panic("tried to allocate memory with size that exceeded max limit");
-		print_raw(250);
-		print_raw(size);
-		print_raw(size_log2);
-		print_raw(max);
+		panic("alloc long long long");
 	}
 	let size_index = max(min,size_log2) -min;
 
@@ -57,15 +51,14 @@ fn core_allocate(size: u32)-> u32{
 		addr = allocate_new_block_of_memory_from_main_pool(size_index);	
 	}else{
 		let next_addr : u32 = mem(addr);
-	//	print_raw(next_addr);
 		let head = access_static("free_heap_blocks_linked_lists")[size_index];
 		access_static("free_heap_blocks_linked_lists")[size_index] = block_to_allocate.next ;
 	}
-	print_raw(addr);
 
 
 	return addr;
 }
+
 // outputs address of this block (u32)
 fn allocate_new_block_of_memory_from_main_pool(size_index: u32 )->u32{
 	let size = 2 << (size_index+  access_static("min_heap_size_pow_2")  - 1);

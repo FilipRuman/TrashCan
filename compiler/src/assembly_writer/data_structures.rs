@@ -17,7 +17,7 @@ pub struct StaticVariable {
     pub label: String,
 }
 pub struct AssemblyData {
-    pub free_registries: VecDeque<u8>,
+    pub free_registers: VecDeque<u8>,
     pub variable_code_blocks: VecDeque<VariableCodeBlocks>,
     pub static_variables: HashMap<String, StaticVariable>,
     pub current_label_id: u32,
@@ -109,6 +109,9 @@ impl AssemblyData {
             bail!("struct with name: {name} was not found!")
         }
     }
+    pub fn free_all_register(&mut self) {
+        self.free_registers = (0..CURRENT_ADDR_REGISTER).collect();
+    }
     pub fn find_struct_mut_ref(&mut self, name: &str) -> Result<&mut Struct> {
         if let Some(struct_val) = self.structs.get_mut(name) {
             Ok(struct_val)
@@ -130,7 +133,7 @@ impl AssemblyData {
             current_break_label_name: String::new(),
             current_var_name_for_function: String::new(),
             current_var_name_for_array_initialization: String::new(),
-            free_registries: (0..CURRENT_ADDR_REGISTER).collect(),
+            free_registers: (0..CURRENT_ADDR_REGISTER).collect(),
             variable_code_blocks: vec![VariableCodeBlocks {
                 variables: HashMap::new(),
                 code_block_type: CodeBlockType::Exclusive,
@@ -149,13 +152,13 @@ impl AssemblyData {
     }
 
     pub fn get_free_register(&mut self) -> Result<u8> {
-        self.free_registries
+        self.free_registers
             .pop_back()
             .context("all registries are used!")
     }
     pub fn mark_registers_free(&mut self, slice: &[u8]) {
         for registry in slice {
-            self.free_registries.push_back(*registry);
+            self.free_registers.push_back(*registry);
         }
     }
     /// return: base address of allocation

@@ -76,7 +76,11 @@ pub fn convert_expressions_to_code(expressions: Vec<Expression>) -> Result<Strin
         info!("new expr- {expression:?}");
         output += &handle_expr(expression, &mut assembly_data)?.code;
         assembly_data.current_var_name_for_function.clear();
+        assembly_data.free_all_register();
     }
+
+
+    info!("assembly_data- registers free- {} ",assembly_data.free_registers.len());
     output += &halt();
 
     Ok(output)

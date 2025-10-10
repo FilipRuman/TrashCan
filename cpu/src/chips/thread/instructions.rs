@@ -7,7 +7,7 @@ pub mod memory_manipulation;
 pub mod special;
 pub(crate) mod stack;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use lazy_static::lazy_static;
 use log::{error, info};
 

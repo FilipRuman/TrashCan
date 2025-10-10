@@ -7,8 +7,8 @@ fn print_chars(text: &u32[]){
 	print_raw("\n");
 	return ;
 }
-//fn panic(text:&u32[]){
-//	print(text);
-//	halt();
-//	return ;
-//}
+fn panic(text:&u32[]){
+	print_chars(text);
+	halt();
+	return ;
+}

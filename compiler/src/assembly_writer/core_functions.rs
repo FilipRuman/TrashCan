@@ -19,6 +19,61 @@ pub enum SyscallTypeID {
     Print = 0,
     Malloc = 1,
 }
+pub fn read_addr(value: Expression, assembly_data: &mut AssemblyData) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+    let alloc_out = assembly_data.allocate_stack(1)?;
+    output_code += &alloc_out.0;
+    let output_data = Data {
+        stack_frame_offset: alloc_out.1 as i32,
+        size: 1,
+        data_type: DataType::U32,
+    };
+    let expr_out = handle_expr(value, assembly_data)?;
+    output_code += &expr_out.code;
+    let addr_copy_register = assembly_data.get_free_register()?;
+    output_code += &expr_out
+        .data
+        .context("value to read it's addr")?
+        .read_addr_of_self(addr_copy_register);
+    output_code += &output_data.write_register(addr_copy_register, 0, assembly_data)?;
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: Some(output_data),
+    })
+}
+
+pub fn init_thread(
+    thread_index_expr: Expression,
+    start_address_expr: Expression,
+    assembly_data: &mut AssemblyData,
+) -> Result<ExpressionOutput> {
+    let mut output_code = String::new();
+
+    let thread_index_expr_out = handle_expr(thread_index_expr, assembly_data)?;
+    let start_addr_expr_out = handle_expr(start_address_expr, assembly_data)?;
+    output_code += &(thread_index_expr_out.code + &start_addr_expr_out.code);
+
+    let thread_index_register = assembly_data.get_free_register()?;
+    let start_addr_register = assembly_data.get_free_register()?;
+    output_code += &thread_index_expr_out
+        .data
+        .context("thread index")?
+        .read_register(thread_index_register, 0, assembly_data)?;
+
+    output_code += &start_addr_expr_out
+        .data
+        .context("start addr")?
+        .read_register(start_addr_register, 0, assembly_data)?;
+
+    output_code += &assembly_instructions::init(thread_index_register, start_addr_register);
+
+    assembly_data.mark_registers_free(&[thread_index_register, start_addr_register]);
+
+    Ok(ExpressionOutput {
+        code: output_code,
+        data: None,
+    })
+}
 
 pub fn syscall(
     id_expression: Expression,

@@ -1,25 +1,45 @@
+//print_raw(00);
 create_static( 9000,"heap_start");
 create_static(*access_static("heap_start"),"heap_main_pool_head");
 create_static( 30000,"heap_end");
-
-create_static(2,"min_heap_size_pow_2")
-create_static(10,"max_heap_size_pow_2")
-
-
+create_static(2,"min_heap_size_pow_2");
+create_static(10,"max_heap_size_pow_2");
 create_static( {&HeapBlock, len :8}, "free_heap_blocks_linked_lists");
 
-
+// task que stores addresses to function to run
+create_static( {u32, len :8}, "task_que");
+create_static( 0, "task_que_head_index");
 
 //allocate 4 registers
-let idt_addr = core_allocate(4);
 
+let idt_addr = core_allocate(4);
+create_static(idt_addr,"idt_addr");
+//print("what?");
 mem(idt_addr+0) =  read_addr_of_function("syscall_handler");
 mem(idt_addr+1) =  read_addr_of_function("timer_interrupt");
 mem(idt_addr +2) =  read_addr_of_function("keyboard_interrupt");
 idt(idt_addr);
-print("\n");
 
+halt();
+print("2555555");
+print("2555555");
+print("2555555");
+print("2555555");
+print("2555555");
+print("2555555");
 
+//init_thread(1,read_addr_of_function("init_1"));
+//halt();
+//halt();
+//init_thread(2,read_addr_of_function("init_2"));
+//halt();
+//halt();
+//init_thread(3,read_addr_of_function("init_3"));
+//halt();
+//halt();
+//print("\n");
+
+//
 //let text =malloc("thing_to_print");
 //print("\n")
 //print_raw(661);
@@ -27,13 +47,41 @@ print("\n");
 //print_chars(text);
 //print("Syscall end");
 
-
 let command_line_file_addr = 5000;
 jump(command_line_file_addr);
 while true{  
 	halt();
+	//print("2555555");
 	//print("\n");
 	print("Clock");
-	
 }
+
+//fn init_1(){
+//
+//	idt(access_static("idt_addr") + 1);
+//	print("      ");
+//	print("\n thread nr.1");
+//
+//	halt();	
+//}
+//
+//
+//fn init_2(){
+//	idt(access_static("idt_addr") + 1);
+//	print("      ");
+//	print("\n thread nr.2");
+//	
+//	halt();	
+//	
+//}
+//
+//fn init_3(){
+//	idt(access_static("idt_addr") + 1);
+//	print("      ");
+//	print("\n thread nr.3");
+//	
+//	halt();	
+//
+//}
+
 

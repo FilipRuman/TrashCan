@@ -4,6 +4,6 @@ interrupt_fn keyboard_interrupt(data:u32){
 }
 
 interrupt_fn timer_interrupt(data:u32){
-	print_raw(data);
+	print_chars("t");
 	return ;
 }

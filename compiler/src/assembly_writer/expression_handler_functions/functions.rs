@@ -4,7 +4,8 @@ use crate::assembly_writer::{
     assembly_instructions,
     core_functions::{
         self, access_static_variable, create_static_variable, direct_reference_access, free, idt,
-        jump, malloc, mark, memory_access, peripheral, print, read_addr_of_function, syscall,
+        init_thread, jump, malloc, mark, memory_access, peripheral, print, read_addr,
+        read_addr_of_function, syscall,
     },
     data_types::FunctionInputData,
     helper_methods,
@@ -251,19 +252,19 @@ pub fn handle_function(
         info!("Function input variable: {input:?}");
     }
 
-    // run contents
-    //
-    //
-
     let previous_function_data = assembly_data.current_function_data_for_return.clone();
     assembly_data.current_function_data_for_return = Some(FunctionDataForReturn {
         name: name.clone(),
         initial_stack_frame_data: initial_stack_frame_data.clone(),
     });
+
+    // run contents
     for expression in inside {
         output_code += &handle_expr(expression, assembly_data)?.code;
         assembly_data.current_var_name_for_function.clear();
+        assembly_data.free_all_register();
     }
+
     assembly_data.current_function_data_for_return = previous_function_data;
     assembly_data.mark_registers_free(&[initial_stack_frame_register]);
     assembly_data.variable_code_blocks.pop_front();
@@ -530,6 +531,18 @@ pub fn handle_core_function_call(
         "mark" => {
             expect_input_len(values, 1).context("mark")?;
             Ok(Some(mark(values[0].to_owned(), assembly_data)?))
+        }
+        "read_addr" => {
+            expect_input_len(values, 1).context("read_addr")?;
+            Ok(Some(read_addr(values[0].to_owned(), assembly_data)?))
+        }
+        "init_thread" => {
+            expect_input_len(values, 2).context("init_thread")?;
+            Ok(Some(init_thread(
+                values[0].to_owned(),
+                values[1].to_owned(),
+                assembly_data,
+            )?))
         }
 
         "syscall" => {

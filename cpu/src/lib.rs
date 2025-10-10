@@ -9,7 +9,7 @@ use chips::{
     b32::B32,
     bit::{mux_8, nand},
     memory::RAM::{ram8::RAM8, ram32k::RAM32k, ram256k::RAM256k, ram512::RAM512},
-    thread::{self, clock_cycle, instructions::Instruction},
+    thread::{self, THREADS, clock_cycle, instructions::Instruction},
 };
 
 pub mod chips;
@@ -20,9 +20,7 @@ pub mod program_loader;
 
 use anyhow::{Context, Ok, Result};
 use clap::Parser;
-use fb::run_frame_buffer;
 use log::*;
-use minifb::Window;
 use tokio::task;
 
 pub const SHOW_INSTRUCTION_FETCHING_DEBUG: bool = false;
@@ -40,6 +38,7 @@ pub async fn main(binary_file_to_load_addr: &str, command_line_file_addr: &str) 
     {
         error::handle_error(err);
     }
+    fb::run();
 
     Ok(())
 }
@@ -54,16 +53,22 @@ pub async fn init(binary_file_to_load_addr: &str, command_line_file_addr: &str) 
     info!("initialized memory: {:?}", elapsed);
 
     load_memory_from_file(&binary_file_to_load_addr, B32(0)).await?;
-
     load_memory_from_file(&command_line_file_addr, B32(5000)).await?;
 
     thread::spawn_threads(args.threads);
+    {
+        let boot_thread = &thread::THREADS.get().unwrap()[0];
+        tokio::spawn(boot_thread.run_loop());
+        tokio::spawn(clock_cycle(boot_thread));
+    }
 
-    let thread = &thread::THREADS.get().unwrap()[0];
+    let mut iter = thread::THREADS.get().unwrap().iter();
+    iter.next();
+    for thread in iter {
+        thread.Halt(true);
+        tokio::spawn(thread.run_loop());
+    }
 
-    tokio::spawn(clock_cycle(thread));
-    tokio::spawn(thread.run_loop());
-    tokio::spawn(run_frame_buffer());
     Ok(())
 }
 pub async fn load_memory_from_file(path: &str, memory_load_base_addr: B32) -> Result<()> {

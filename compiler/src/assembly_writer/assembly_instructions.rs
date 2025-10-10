@@ -5,6 +5,9 @@ pub fn syscall(
 ) -> String {
     format!("Syscall r{syscall_id_register} , r{input_data_register} , r{output_data_register}\n")
 }
+pub fn init(register_thread_index: u8, start_address_register: u8) -> String {
+    format!("Init r{register_thread_index} , r{start_address_register}")
+}
 pub fn comment(text: &str) -> String {
     format!("// {}\n", text.replace("\n", "\n //"))
 }

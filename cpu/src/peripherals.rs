@@ -16,10 +16,10 @@ lazy_static! {
 static LAST_GPU_COMMAND_PART: AtomicU32 = AtomicU32::new(u32::MAX);
 
 pub async fn call_peripheral(peripheral_index: B32, data: B32) -> Result<()> {
-    // info!(
-    //     "call_peripheral {peripheral_index},data {} bits {:032b}",
-    //     data.0, data.0
-    // );
+    info!(
+        "call_peripheral {peripheral_index},data {} bits {:032b}",
+        data.0, data.0
+    );
 
     match peripheral_index.0 as u32 {
         0 => {
@@ -34,7 +34,8 @@ pub async fn call_peripheral(peripheral_index: B32, data: B32) -> Result<()> {
                 fb::push_new_command(fb::Command {
                     color: data.0,
                     pos: last,
-                });
+                })
+                .await?;
 
                 LAST_GPU_COMMAND_PART.store(u32::MAX, std::sync::atomic::Ordering::Relaxed);
             }

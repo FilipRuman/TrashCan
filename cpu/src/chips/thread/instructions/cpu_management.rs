@@ -1,6 +1,9 @@
 use anyhow::Result;
 use log::info;
-use std::time::Duration;
+use std::{
+    sync::{self, atomic::Ordering::Relaxed},
+    time::Duration,
+};
 use tokio::time::sleep;
 
 use crate::{
@@ -11,8 +14,7 @@ use crate::{
 
 impl Thread {
     pub fn Halt(&self, run: bool) {
-        self.is_halting
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.is_halting.store(true, Relaxed);
     }
     pub async fn Sleep(&self, length_register: B8, run: bool) {
         sleep(Duration::from_millis(
@@ -48,13 +50,15 @@ impl Thread {
         let thread_index = self.registers.read(register_thread_index);
         let start_address = self.registers.read(start_address_register);
         let thread = &THREADS.get().unwrap()[thread_index.0 as usize];
-        self.registers
-            .write(start_address, CURRENT_ADDR_REGISTER, run);
 
-        tokio::spawn(clock_cycle(thread));
-        tokio::spawn(thread.run_loop());
+        thread
+            .registers
+            .write(start_address, CURRENT_ADDR_REGISTER, run);
+        thread.is_halting.store(false, Relaxed);
+
         Ok(())
     }
+
     pub fn Intr(&self, thread_index_register: B8, interrupt_type_index_register: B8, run: bool) {
         let thread_index = self.registers.read(thread_index_register);
         let interrupt_type = self.registers.read(interrupt_type_index_register);
@@ -65,7 +69,7 @@ impl Thread {
             },
         );
     }
-    const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;
+    const ORDERING: sync::atomic::Ordering = Relaxed;
     pub fn Iret(&self, address_register: B8, run: bool) {
         self.Jmp(address_register, run);
         self.interrupt_controller.end_interrupt();

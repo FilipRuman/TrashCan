@@ -1,25 +1,27 @@
-//create_static(1280,"screen_width");
-//create_static(720, "screen_height");
-//test_screen();
-//print("command_line");
-//halt();
-//halt();
-//halt();
-////print("3 halts!");
-//
-//while true{
-//	//print("timer loop");
-//	halt();
-//}
+create_static(300,"screen_width");
+create_static(100, "screen_height");
+print("cmd");
+test_screen();
+print("END!");
+
+while true{
+      //print("timer loop");
+      halt();
+}
 
 
+// TODO: Add flappybird like game to test this out. Some more work will be needed tho: 
+// re enable timer interrupts for more than 1 time.
+// make interrupts save all registers
+// add listener functions for: keyboard and timer interrupts. -> needed for responding to keyboard and adding game loop 
+// rng for random obsticles
+// + tasks handling system would be nice to speed up rendering.
 fn test_screen(){
-	//let w =access_static("screen_width");
-	let w =1280;
-	let h =720;
-	//let h =access_static("screen_height");
-	for x in 0..w{
-		for y in 0..h{
+	let w =access_static("screen_width");
+	let h =access_static("screen_height");
+
+	for y in 0..h{
+		for x in 0..w{
 			let pos_index = x + y * w;		
 			let color = 11110;
 			peripheral(1,pos_index);
@@ -27,4 +29,23 @@ fn test_screen(){
 		}
 	}
 
+	
+	//for y in 0..h{
+	//	for x in 0..w{
+	//		let pos_index = x + y * w;		
+	//		let color = 11110;
+	//		peripheral(1,pos_index);
+	//		peripheral(1,color);
+	//	}
+	//}
+	//for y in 0..h{
+	//	for x in 0..w{
+	//		let pos_index = x + y * w;		
+	//		let color = 11110;
+	//		peripheral(1,pos_index);
+	//		peripheral(1,color);
+	//	}
+	//}
+
+	return ;
 } 

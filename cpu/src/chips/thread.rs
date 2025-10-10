@@ -130,7 +130,8 @@ impl Thread {
         self.interrupt_controller.interrupts.push(interrupt);
         self.is_halting.store(false, ORDERING);
     }
-    pub async fn run_loop(&self) -> Result<()> {
+    pub async fn run_loop(&self) {
+        info!("run_loop");
         loop {
             if self.is_halting.load(std::sync::atomic::Ordering::Relaxed) {
                 sleep(Duration::from_millis(1));
@@ -151,7 +152,6 @@ impl Thread {
             }
             self.registers.increment(CURRENT_ADDR_REGISTER);
         }
-        Ok(())
     }
 
     fn fetch_instruction(&self) -> Instruction {
@@ -186,13 +186,14 @@ pub async fn clock_cycle(thread: &Thread) {
                 kind: InterruptKind::Timer,
                 data: 0,
             });
+            break;
         }
     }
 }
 pub fn spawn_threads(thread_count: usize) {
     let mut threads = Vec::with_capacity(thread_count);
     for i in 0..thread_count {
-        threads.push(create_thread(B32((30000 + 5000 * i) as u32)));
+        threads.push(create_thread(B32((30000 + 20000 * i) as u32)));
     }
     THREADS.get_or_init(|| threads);
 }

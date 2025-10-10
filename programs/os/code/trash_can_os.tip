@@ -5,11 +5,7 @@ include "useful.tip"
 include "allocator.tip"
 include "interrupt_handlers.tip"
 include "syscall.tip"
-
-
+//
+//
 //  TODO: Implement: graphics rendering, paging,. 
-
-
 // implement:  write command line app, add support for multithreading 
-
-
